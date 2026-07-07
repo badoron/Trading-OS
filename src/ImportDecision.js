@@ -3,7 +3,7 @@
  * Version: v3.0.0-core
  */
 
-const TOS_IMPORT_DECISION = {
+const TOS_IMPORT_DECISION_ENGINE = {
   ACTIONS: {
     IMPORT: 'IMPORT',
     IGNORE: 'IGNORE',

@@ -129,7 +129,7 @@ function tosAddMockDDCImport() {
 }
 function tosImportFirstPending() {
   tosRunSafe_('Import First Pending', function () {
-    TOS_IMPORT_DECISION.applyDecision('REV-000001', TOS_IMPORT_DECISION.ACTIONS.IMPORT, 'Manual test');
+    _ENGIN.applyDecision('REV-000001', TOS_IMPORT_DECISION_ENGIN.ACTIONS.IMPORT, 'Manual test');
     SpreadsheetApp.getUi().alert('REV-000001 marked as IMPORT ✅');
   });
 }
