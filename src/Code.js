@@ -27,6 +27,7 @@ function onOpen() {
     .addSeparator()
     .addItem('➕ New Trade Wizard', 'tosNewTradeWizard')
     .addItem('🧪 Add Mock DDC Import', 'tosAddMockDDCImport')
+    .addItem('✅ Test Import Decision', 'tosImportFirstPending')
     .addItem('🎯 Scan Opportunities', 'tosScanOpportunities')
     .addSeparator()
     .addItem('🧹 Health Check', 'tosHealthCheck')
@@ -124,5 +125,11 @@ function tosUpdateActionQueue_(actionName, status) {
 function tosAddMockDDCImport() {
   tosRunSafe_('Add Mock DDC Import', function () {
     TOS_IMPORT.addMockDDC();
+  });
+}
+function tosImportFirstPending() {
+  tosRunSafe_('Import First Pending', function () {
+    TOS_IMPORT_DECISION.applyDecision('REV-000001', TOS_IMPORT_DECISION.ACTIONS.IMPORT, 'Manual test');
+    SpreadsheetApp.getUi().alert('REV-000001 marked as IMPORT ✅');
   });
 }
