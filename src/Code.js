@@ -26,6 +26,7 @@ function onOpen() {
     .addItem('🌅 Morning Routine', 'tosMorningRoutine')
     .addSeparator()
     .addItem('➕ New Trade Wizard', 'tosNewTradeWizard')
+    .addItem('🧪 Add Mock DDC Import', 'tosAddMockDDCImport')
     .addItem('🎯 Scan Opportunities', 'tosScanOpportunities')
     .addSeparator()
     .addItem('🧹 Health Check', 'tosHealthCheck')
@@ -119,4 +120,9 @@ function tosUpdateActionQueue_(actionName, status) {
     status,
     TOS.VERSION
   ]);
+}
+function tosAddMockDDCImport() {
+  tosRunSafe_('Add Mock DDC Import', function () {
+    TOS_IMPORT.addMockDDC();
+  });
 }
