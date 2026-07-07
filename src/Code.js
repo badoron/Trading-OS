@@ -73,18 +73,7 @@ function tosEndOfDay() {
 
 function tosHealthCheck() {
   tosRunSafe_('Health Check', function () {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const requiredSheets = Object.values(TOS.SHEETS);
-    const missing = requiredSheets.filter(name => !ss.getSheetByName(name));
-
-    if (missing.length > 0) {
-      tosLog_('QA', 'Missing sheets: ' + missing.join(', '), 'FAIL');
-      SpreadsheetApp.getUi().alert('Health Check failed:\n\nMissing sheets:\n' + missing.join('\n'));
-      return;
-    }
-
-    tosLog_('QA', 'Health Check passed', 'SUCCESS');
-    SpreadsheetApp.getUi().alert('Health Check passed ✅');
+    TOS_HEALTH.run();
   });
 }
 
