@@ -5,13 +5,7 @@
 
 const TOS_LOGGER = {
   log(moduleName, message, status) {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let sheet = ss.getSheetByName(TOS_SHEETS.SYNC_LOG);
-
-    if (!sheet) {
-      sheet = ss.insertSheet(TOS_SHEETS.SYNC_LOG);
-      sheet.appendRow(['Timestamp', 'Module', 'Message', 'Status', 'Version']);
-    }
+    const sheet = TOS_SHEETS_API.get(TOS_SHEETS.SYNC_LOG);
 
     sheet.appendRow([
       new Date(),
