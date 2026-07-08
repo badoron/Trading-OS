@@ -151,12 +151,8 @@ const TOS_TRADE_GROUPER = {
   },
 
   calcLegValue_(trade) {
-    const qty = Number(trade.quantity || 0);
-    const price = Number(trade.tradePrice || 0);
-    const multiplier = Number(trade.multiplier || 100);
-
-    return qty * price * multiplier;
-  },
+  return Number(trade.netCash || 0);
+},
 
   parseDateTime_(value) {
     if (!value) return new Date(0);
