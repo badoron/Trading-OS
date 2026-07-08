@@ -40,20 +40,24 @@ const TOS_IBKR_FLEX_PARSER = {
   },
 
   testParse() {
-    const xml = TOS_IBKR_FLEX.getLastXml();
+  const xml = TOS_IBKR_FLEX.getLastXml();
 
-    if (!xml) {
-      throw new Error('No cached IBKR XML found. Run testIBKRFlexConnection successfully first.');
-    }
-
-    const parsed = this.parse(xml);
-    const trades = parsed.trades || [];
-
-    Logger.log('Trades count: ' + trades.length);
-    Logger.log(JSON.stringify(trades, null, 2));
-
-    return parsed;
+  if (!xml) {
+    throw new Error('No cached IBKR XML found.');
   }
+
+  const parsed = this.parse(xml);
+
+  Logger.log('Trades count: ' + (parsed.trades || []).length);
+  Logger.log('OpenPositions count: ' + (parsed.openPositions || []).length);
+  Logger.log('AccountInfo count: ' + (parsed.accountInfo || []).length);
+
+  if ((parsed.openPositions || []).length > 0) {
+    Logger.log('First OpenPosition: ' + JSON.stringify(parsed.openPositions[0], null, 2));
+  }
+
+  return parsed;
+}
 };
 
 function testIBKRFlexParser() {
