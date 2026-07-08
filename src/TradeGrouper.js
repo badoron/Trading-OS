@@ -1,67 +1,76 @@
 /**
  * Trading OS - Trade Grouper
- * Generic grouping layer. Does not classify strategy.
+ * MVP grouping for DDC opening batches.
  */
 
 const TOS_TRADE_GROUPER = {
-  GROUP_WINDOW_SECONDS: 120,
+  DDC_OPEN_WINDOW_SECONDS: 20,
 
-  groupOptionTrades(trades) {
+  groupDdcOpenBatches(trades) {
     const optionTrades = (trades || [])
       .filter(t => t.assetCategory === 'OPT')
       .sort((a, b) => this.parseDateTime_(a.dateTime) - this.parseDateTime_(b.dateTime));
 
     const groups = [];
+    let current = [];
 
     optionTrades.forEach(trade => {
-      const group = this.findMatchingGroup_(groups, trade);
+      if (current.length === 0) {
+        current.push(trade);
+        return;
+      }
 
-      if (group) {
-        group.legs.push(trade);
-        group.sourceTradeIds.push(trade.tradeID || '');
-        group.sourceTransactionIds.push(trade.transactionID || '');
-        group.netCreditDebit += this.calcLegValue_(trade);
+      const firstTime = this.parseDateTime_(current[0].dateTime);
+      const tradeTime = this.parseDateTime_(trade.dateTime);
+      const diffSeconds = Math.abs((tradeTime - firstTime) / 1000);
+
+      const sameSymbol =
+        (trade.underlyingSymbol || trade.symbol || '') ===
+        (current[0].underlyingSymbol || current[0].symbol || '');
+
+      const sameExpiry = (trade.expiry || '') === (current[0].expiry || '');
+
+      if (
+        sameSymbol &&
+        sameExpiry &&
+        diffSeconds <= this.DDC_OPEN_WINDOW_SECONDS &&
+        current.length < 4
+      ) {
+        current.push(trade);
       } else {
-        groups.push(this.createGroup_(trade));
+        this.pushIfDdcOpen_(groups, current);
+        current = [trade];
       }
     });
+
+    this.pushIfDdcOpen_(groups, current);
 
     return groups;
   },
 
-  createGroup_(trade) {
-    return {
-      groupId: this.buildGroupId_(trade),
-      symbol: trade.underlyingSymbol || trade.symbol || '',
-      expiry: trade.expiry || '',
-      assetClass: trade.assetCategory || '',
-      firstDateTime: trade.dateTime || '',
-      legs: [trade],
-      sourceTradeIds: [trade.tradeID || ''],
-      sourceTransactionIds: [trade.transactionID || ''],
-      netCreditDebit: this.calcLegValue_(trade)
-    };
-  },
+  pushIfDdcOpen_(groups, legs) {
+    if (legs.length !== 4) return;
 
-  findMatchingGroup_(groups, trade) {
-    const symbol = trade.underlyingSymbol || trade.symbol || '';
-    const expiry = trade.expiry || '';
-    const tradeTime = this.parseDateTime_(trade.dateTime);
+    const first = legs[0];
 
-    return groups.find(group => {
-      if (group.symbol !== symbol) return false;
-      if (group.expiry !== expiry) return false;
-
-      const groupTime = this.parseDateTime_(group.firstDateTime);
-      const diffSeconds = Math.abs((tradeTime - groupTime) / 1000);
-
-      return diffSeconds <= this.GROUP_WINDOW_SECONDS;
+    groups.push({
+      groupId: this.buildGroupId_(first),
+      symbol: first.underlyingSymbol || first.symbol || '',
+      expiry: first.expiry || '',
+      assetClass: first.assetCategory || '',
+      firstDateTime: first.dateTime || '',
+      strategyGuess: 'DDC',
+      legCount: legs.length,
+      legs: legs,
+      sourceTradeIds: legs.map(t => t.tradeID || '').filter(String),
+      sourceTransactionIds: legs.map(t => t.transactionID || '').filter(String),
+      netCreditDebit: legs.reduce((sum, leg) => sum + this.calcLegValue_(leg), 0)
     });
   },
 
   buildGroupId_(trade) {
     return [
-      'IBKR-GRP',
+      'IBKR-DDC',
       trade.underlyingSymbol || trade.symbol || 'UNKNOWN',
       trade.expiry || 'NOEXP',
       trade.dateTime || new Date().getTime()
@@ -98,18 +107,20 @@ const TOS_TRADE_GROUPER = {
   testFromCachedXml() {
     const xml = TOS_IBKR_FLEX.getLastXml();
     const parsed = TOS_IBKR_FLEX_PARSER.parse(xml);
-    const groups = this.groupOptionTrades(parsed.trades);
+    const groups = this.groupDdcOpenBatches(parsed.trades);
 
-    Logger.log('Trade groups: ' + groups.length);
+    Logger.log('DDC open groups: ' + groups.length);
 
     groups.forEach((group, index) => {
       Logger.log(
-        'Group #' + (index + 1) +
+        'DDC Group #' + (index + 1) +
         ' | ' + group.symbol +
         ' | Expiry: ' + group.expiry +
-        ' | Legs: ' + group.legs.length +
+        ' | Legs: ' + group.legCount +
         ' | Net: ' + group.netCreditDebit
       );
+
+      Logger.log(JSON.stringify(group.legs, null, 2));
     });
 
     return groups;
