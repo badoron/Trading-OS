@@ -5,7 +5,7 @@
 
 const TOS_IBKR_FLEX_PARSER = {
   parse(xmlText) {
-    const doc = XMLService.parse(xmlText);
+    const doc = XmlService.parse(xmlText);
     const root = doc.getRootElement();
 
     return {
@@ -22,9 +22,7 @@ const TOS_IBKR_FLEX_PARSER = {
       results.push(this.elementToObject_(element));
     }
 
-    const children = element.getChildren();
-
-    children.forEach(child => {
+    element.getChildren().forEach(child => {
       results = results.concat(this.findElements_(child, tagName));
     });
 
@@ -42,20 +40,17 @@ const TOS_IBKR_FLEX_PARSER = {
   },
 
   testParse() {
-    const xml = TOS_IBKR_FLEX.downloadStatement();
+    const xml = TOS_IBKR_FLEX.getLastXml();
+
+    if (!xml) {
+      throw new Error('No cached IBKR XML found. Run testIBKRFlexConnection successfully first.');
+    }
+
     const parsed = this.parse(xml);
+    const trades = parsed.trades || [];
 
-    Logger.log('AccountInfo count: ' + parsed.accountInfo.length);
-    Logger.log('Trades count: ' + parsed.trades.length);
-    Logger.log('OpenPositions count: ' + parsed.openPositions.length);
-
-    if (parsed.trades.length > 0) {
-      Logger.log('First trade: ' + JSON.stringify(parsed.trades[0], null, 2));
-    }
-
-    if (parsed.openPositions.length > 0) {
-      Logger.log('First open position: ' + JSON.stringify(parsed.openPositions[0], null, 2));
-    }
+    Logger.log('Trades count: ' + trades.length);
+    Logger.log(JSON.stringify(trades, null, 2));
 
     return parsed;
   }
