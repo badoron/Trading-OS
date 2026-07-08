@@ -5,6 +5,8 @@
 const TOS_IBKR_FLEX = {
   BASE_URL: 'https://www.interactivebrokers.com/Universal/servlet',
   RAW_XML_SHEET: 'IBKR_RAW_XML',
+  MAX_RETRIES: 10,
+  RETRY_SLEEP_MS: 10000,
 
   getConfig() {
     return {
@@ -25,7 +27,16 @@ const TOS_IBKR_FLEX = {
     };
   },
 
-  sendRequest() {
+  hasFailure_(xmlText) {
+    return xmlText.indexOf('<Status>Fail</Status>') !== -1;
+  },
+
+  getErrorCode_(xmlText) {
+    const match = xmlText.match(/<ErrorCode>(.*?)<\/ErrorCode>/);
+    return match ? match[1] : '';
+  },
+
+  sendRequestOnce_() {
     const config = this.getConfig();
 
     const url =
@@ -36,22 +47,39 @@ const TOS_IBKR_FLEX = {
 
     const result = this.fetch_(url);
 
-    Logger.log('IBKR SendRequest status: ' + result.statusCode);
+    Logger.log('IBKR SendRequest HTTP: ' + result.statusCode);
     Logger.log('IBKR SendRequest body: ' + result.body.substring(0, 1000));
 
     if (result.statusCode !== 200) {
-      throw new Error('IBKR SendRequest failed: HTTP ' + result.statusCode);
+      throw new Error('IBKR SendRequest HTTP failed: ' + result.statusCode);
     }
-
-    this.assertSuccess_(result.body, 'SendRequest');
 
     return result.body;
   },
 
-  assertSuccess_(xmlText, stage) {
-    if (xmlText.indexOf('<Status>Fail</Status>') !== -1) {
-      throw new Error('IBKR ' + stage + ' failed: ' + xmlText);
+  sendRequest() {
+    for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
+      Logger.log('IBKR SendRequest attempt ' + attempt + '/' + this.MAX_RETRIES);
+
+      const body = this.sendRequestOnce_();
+
+      if (!this.hasFailure_(body)) {
+        return body;
+      }
+
+      const errorCode = this.getErrorCode_(body);
+
+      if (errorCode !== '1001') {
+        throw new Error('IBKR SendRequest failed: ' + body);
+      }
+
+      if (attempt < this.MAX_RETRIES) {
+        Logger.log('IBKR 1001 received. Waiting before retry...');
+        Utilities.sleep(this.RETRY_SLEEP_MS);
+      }
     }
+
+    throw new Error('IBKR SendRequest failed after retries.');
   },
 
   extractReferenceCode(xmlText) {
@@ -75,14 +103,16 @@ const TOS_IBKR_FLEX = {
 
     const result = this.fetch_(url);
 
-    Logger.log('IBKR GetStatement status: ' + result.statusCode);
-    Logger.log('IBKR GetStatement first 1000 chars: ' + result.body.substring(0, 1000));
+    Logger.log('IBKR GetStatement HTTP: ' + result.statusCode);
+    Logger.log('IBKR GetStatement body: ' + result.body.substring(0, 1000));
 
     if (result.statusCode !== 200) {
-      throw new Error('IBKR GetStatement failed: HTTP ' + result.statusCode);
+      throw new Error('IBKR GetStatement HTTP failed: ' + result.statusCode);
     }
 
-    this.assertSuccess_(result.body, 'GetStatement');
+    if (this.hasFailure_(result.body)) {
+      throw new Error('IBKR GetStatement failed: ' + result.body);
+    }
 
     return result.body;
   },
@@ -99,8 +129,9 @@ const TOS_IBKR_FLEX = {
   },
 
   saveLastXml_(xml) {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(this.RAW_XML_SHEET);
+    const sheet = SpreadsheetApp
+      .getActiveSpreadsheet()
+      .getSheetByName(this.RAW_XML_SHEET);
 
     if (!sheet) {
       throw new Error('Missing sheet: ' + this.RAW_XML_SHEET);
@@ -111,8 +142,9 @@ const TOS_IBKR_FLEX = {
   },
 
   getLastXml() {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(this.RAW_XML_SHEET);
+    const sheet = SpreadsheetApp
+      .getActiveSpreadsheet()
+      .getSheetByName(this.RAW_XML_SHEET);
 
     if (!sheet) {
       throw new Error('Missing sheet: ' + this.RAW_XML_SHEET);
