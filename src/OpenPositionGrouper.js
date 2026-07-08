@@ -1,6 +1,7 @@
 /**
  * Trading OS - Open Position Grouper
  * MVP: Detect active DDC strategies from IBKR Open Positions.
+ * Future-ready: strategy-specific detection can be added here.
  */
 
 const TOS_OPEN_POSITION_GROUPER = {
@@ -21,8 +22,10 @@ const TOS_OPEN_POSITION_GROUPER = {
     const ddcGroups = [];
 
     Object.keys(bySymbol).forEach(symbol => {
-      const groups = this.detectDdcForSymbol_(symbol, bySymbol[symbol]);
-      ddcGroups.push.apply(ddcGroups, groups);
+      ddcGroups.push.apply(
+        ddcGroups,
+        this.detectDdcForSymbol_(symbol, bySymbol[symbol])
+      );
     });
 
     Logger.log('Active DDC groups found: ' + ddcGroups.length);
@@ -45,30 +48,39 @@ const TOS_OPEN_POSITION_GROUPER = {
   detectDdcForSymbol_(symbol, positions) {
     const byExpiry = this.groupBy_(positions, p => p.expiry || '');
     const expiries = Object.keys(byExpiry).sort();
+
+    const shortPairs = [];
+    const longPairs = [];
+
+    expiries.forEach(expiry => {
+      const legs = byExpiry[expiry];
+
+      const shorts = legs.filter(p => p.side === 'Short');
+      const longs = legs.filter(p => p.side === 'Long');
+
+      if (this.isCallPutPair_(shorts)) {
+        shortPairs.push({ expiry: expiry, legs: shorts });
+      }
+
+      if (this.isCallPutPair_(longs)) {
+        longPairs.push({ expiry: expiry, legs: longs, used: false });
+      }
+    });
+
     const results = [];
 
-    for (let i = 0; i < expiries.length; i++) {
-      for (let j = 0; j < expiries.length; j++) {
-        if (i === j) continue;
+    shortPairs.forEach(shortPair => {
+      const longPair = longPairs.find(lp =>
+        !lp.used && lp.expiry > shortPair.expiry
+      );
 
-        const shortExpiry = expiries[i];
-        const longExpiry = expiries[j];
+      if (!longPair) return;
 
-        if (shortExpiry >= longExpiry) continue;
+      longPair.used = true;
 
-        const shortLegs = byExpiry[shortExpiry].filter(p => p.side === 'Short');
-        const longLegs = byExpiry[longExpiry].filter(p => p.side === 'Long');
-
-        if (!this.isCallPutPair_(shortLegs)) continue;
-        if (!this.isCallPutPair_(longLegs)) continue;
-
-        const legs = shortLegs.concat(longLegs);
-
-        if (legs.length !== 4) continue;
-
-        results.push(this.buildDdcGroup_(symbol, shortExpiry, longExpiry, legs));
-      }
-    }
+      const legs = shortPair.legs.concat(longPair.legs);
+      results.push(this.buildDdcGroup_(symbol, shortPair.expiry, longPair.expiry, legs));
+    });
 
     return results;
   },
@@ -84,33 +96,18 @@ const TOS_OPEN_POSITION_GROUPER = {
 
   buildDdcGroup_(symbol, shortExpiry, longExpiry, legs) {
     return {
-      groupId: [
-        'IBKR-ACTIVE-DDC',
-        symbol,
-        shortExpiry,
-        longExpiry
-      ].join('-'),
-
+      groupId: ['IBKR-ACTIVE-DDC', symbol, shortExpiry, longExpiry].join('-'),
       symbol: symbol,
       strategyGuess: 'DDC',
       assetClass: 'OPT',
       legCount: 4,
-
       shortExpiry: shortExpiry,
       longExpiry: longExpiry,
       expirationSummary: shortExpiry + ' / ' + longExpiry,
-
       legs: legs,
-
       sourcePositionIds: legs.map(p => p.conid || p.symbol || '').filter(String),
-
-      netCostBasis: legs.reduce((sum, p) => {
-        return sum + Number(p.costBasisMoney || 0);
-      }, 0),
-
-      marketValue: legs.reduce((sum, p) => {
-        return sum + Number(p.positionValue || 0);
-      }, 0)
+      netCostBasis: legs.reduce((sum, p) => sum + Number(p.costBasisMoney || 0), 0),
+      marketValue: legs.reduce((sum, p) => sum + Number(p.positionValue || 0), 0)
     };
   },
 
@@ -119,13 +116,9 @@ const TOS_OPEN_POSITION_GROUPER = {
 
     items.forEach(item => {
       const key = keyFn(item);
-
       if (!key) return;
 
-      if (!map[key]) {
-        map[key] = [];
-      }
-
+      if (!map[key]) map[key] = [];
       map[key].push(item);
     });
 
