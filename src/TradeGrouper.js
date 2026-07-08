@@ -6,11 +6,20 @@
 const TOS_TRADE_GROUPER = {
   DDC_OPEN_WINDOW_SECONDS: 20,
 
-  groupDdcOpenBatches(trades) {
-    const optionTrades = (trades || [])
+  getOptionTrades_(trades) {
+    return (trades || [])
       .filter(t => t.assetCategory === 'OPT')
       .sort((a, b) => this.parseDateTime_(a.dateTime) - this.parseDateTime_(b.dateTime));
+  },
 
+  getOpeningExchTrades_(trades) {
+    return this.getOptionTrades_(trades)
+      .filter(t => t.transactionType === 'ExchTrade')
+      .filter(t => t.openCloseIndicator === 'O');
+  },
+
+  groupDdcOpenBatches(trades) {
+    const optionTrades = this.getOpeningExchTrades_(trades);
     const groups = [];
     let current = [];
 
@@ -20,15 +29,16 @@ const TOS_TRADE_GROUPER = {
         return;
       }
 
-      const firstTime = this.parseDateTime_(current[0].dateTime);
+      const first = current[0];
+      const firstTime = this.parseDateTime_(first.dateTime);
       const tradeTime = this.parseDateTime_(trade.dateTime);
       const diffSeconds = Math.abs((tradeTime - firstTime) / 1000);
 
       const sameSymbol =
         (trade.underlyingSymbol || trade.symbol || '') ===
-        (current[0].underlyingSymbol || current[0].symbol || '');
+        (first.underlyingSymbol || first.symbol || '');
 
-      const sameExpiry = (trade.expiry || '') === (current[0].expiry || '');
+      const sameExpiry = (trade.expiry || '') === (first.expiry || '');
 
       if (
         sameSymbol &&
@@ -64,7 +74,40 @@ const TOS_TRADE_GROUPER = {
       legs: legs,
       sourceTradeIds: legs.map(t => t.tradeID || '').filter(String),
       sourceTransactionIds: legs.map(t => t.transactionID || '').filter(String),
+      brokerageOrderIds: legs.map(t => t.brokerageOrderID || '').filter(String),
       netCreditDebit: legs.reduce((sum, leg) => sum + this.calcLegValue_(leg), 0)
+    });
+  },
+
+  logDiagnostics_(trades) {
+    const optionTrades = this.getOptionTrades_(trades);
+    const exchTrades = optionTrades.filter(t => t.transactionType === 'ExchTrade');
+    const bookTrades = optionTrades.filter(t => t.transactionType === 'BookTrade');
+    const opens = optionTrades.filter(t => t.openCloseIndicator === 'O');
+    const closes = optionTrades.filter(t => t.openCloseIndicator === 'C');
+    const openingExchTrades = this.getOpeningExchTrades_(trades);
+
+    Logger.log('Total trades: ' + (trades || []).length);
+    Logger.log('Option trades: ' + optionTrades.length);
+    Logger.log('ExchTrade: ' + exchTrades.length);
+    Logger.log('BookTrade: ' + bookTrades.length);
+    Logger.log('Open indicator O: ' + opens.length);
+    Logger.log('Close indicator C: ' + closes.length);
+    Logger.log('Opening ExchTrades used for DDC: ' + openingExchTrades.length);
+
+    openingExchTrades.forEach((trade, index) => {
+      Logger.log(
+        'OPEN #' + (index + 1) +
+        ' | ' + (trade.underlyingSymbol || '') +
+        ' | ' + trade.expiry +
+        ' | ' + trade.putCall +
+        ' | strike ' + trade.strike +
+        ' | ' + trade.buySell +
+        ' | qty ' + trade.quantity +
+        ' | price ' + trade.tradePrice +
+        ' | time ' + trade.dateTime +
+        ' | order ' + (trade.brokerageOrderID || trade.ibOrderID || '')
+      );
     });
   },
 
@@ -106,8 +149,17 @@ const TOS_TRADE_GROUPER = {
 
   testFromCachedXml() {
     const xml = TOS_IBKR_FLEX.getLastXml();
+
+    if (!xml) {
+      throw new Error('No cached IBKR XML found.');
+    }
+
     const parsed = TOS_IBKR_FLEX_PARSER.parse(xml);
-    const groups = this.groupDdcOpenBatches(parsed.trades);
+    const trades = parsed.trades || [];
+
+    this.logDiagnostics_(trades);
+
+    const groups = this.groupDdcOpenBatches(trades);
 
     Logger.log('DDC open groups: ' + groups.length);
 
