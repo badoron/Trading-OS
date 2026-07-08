@@ -39,7 +39,7 @@ const TOS_IBKR_FLEX_PARSER = {
     return obj;
   },
 
-  testParse() {
+testParse() {
   const xml = TOS_IBKR_FLEX.getLastXml();
 
   if (!xml) {
@@ -48,13 +48,31 @@ const TOS_IBKR_FLEX_PARSER = {
 
   const parsed = this.parse(xml);
 
+  Logger.log('============================');
+  Logger.log('IBKR FLEX PARSER');
+  Logger.log('============================');
+
   Logger.log('Trades count: ' + (parsed.trades || []).length);
   Logger.log('OpenPositions count: ' + (parsed.openPositions || []).length);
   Logger.log('AccountInfo count: ' + (parsed.accountInfo || []).length);
 
-  if ((parsed.openPositions || []).length > 0) {
-    Logger.log('First OpenPosition: ' + JSON.stringify(parsed.openPositions[0], null, 2));
-  }
+  Logger.log('============================');
+  Logger.log('OPEN POSITIONS');
+  Logger.log('============================');
+
+  (parsed.openPositions || []).forEach((p, i) => {
+    Logger.log(
+      'POS #' + (i + 1) +
+      ' | Symbol=' + (p.underlyingSymbol || '') +
+      ' | Exp=' + (p.expiry || '') +
+      ' | ' + (p.putCall || '') +
+      ' ' + (p.strike || '') +
+      ' | Side=' + (p.side || '') +
+      ' | Position=' + (p.position || '') +
+      ' | Cost=' + (p.costBasisMoney || '') +
+      ' | Value=' + (p.positionValue || '')
+    );
+  });
 
   return parsed;
 }
