@@ -1,12 +1,10 @@
 /**
  * Trading OS - IBKR Flex Client
- * Handles IBKR Flex Web Service connectivity.
  */
 
 const TOS_IBKR_FLEX = {
   BASE_URL: 'https://www.interactivebrokers.com/Universal/servlet',
-  CACHE_KEY_LAST_XML: 'IBKR_FLEX_LAST_XML',
-  CACHE_TTL_SECONDS: 21600,
+  RAW_XML_SHEET: 'IBKR_RAW_XML',
 
   getConfig() {
     return {
@@ -101,15 +99,26 @@ const TOS_IBKR_FLEX = {
   },
 
   saveLastXml_(xml) {
-    CacheService
-      .getScriptCache()
-      .put(this.CACHE_KEY_LAST_XML, xml, this.CACHE_TTL_SECONDS);
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(this.RAW_XML_SHEET);
+
+    if (!sheet) {
+      throw new Error('Missing sheet: ' + this.RAW_XML_SHEET);
+    }
+
+    sheet.getRange('B1').setValue(new Date());
+    sheet.getRange('B2').setValue(xml);
   },
 
   getLastXml() {
-    return CacheService
-      .getScriptCache()
-      .get(this.CACHE_KEY_LAST_XML);
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(this.RAW_XML_SHEET);
+
+    if (!sheet) {
+      throw new Error('Missing sheet: ' + this.RAW_XML_SHEET);
+    }
+
+    return sheet.getRange('B2').getValue();
   },
 
   testConnection() {
