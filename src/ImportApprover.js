@@ -19,15 +19,17 @@ const TOS_IMPORT_APPROVER = {
     if (!masterSheet) throw new Error('Missing sheet: ' + this.MASTER_TRADES);
     if (!legsSheet) throw new Error('Missing sheet: ' + this.TRADE_LEGS);
 
-    const review = this.getTable_(reviewSheet, ['ReviewID', 'DetectedGroupID', 'Decision']);
+    const review = this.getTable_(reviewSheet, ['ReviewID', 'DetectedGroupID']);
     const master = this.getTable_(masterSheet, ['TradeID']);
     const legsTable = this.getTable_(legsSheet, ['LegID', 'TradeID']);
+
+    Logger.log('Review rows: ' + review.rows.length);
 
     const groups = TOS_OPEN_POSITION_GROUPER.detectActiveDdcFromCachedXml();
     const groupMap = {};
     groups.forEach(g => groupMap[g.groupId] = g);
 
-    const existingTradeIds = this.getExistingIds_(masterSheet, master, 'TradeID');
+    const existingTradeIds = this.getExistingIds_(master, 'TradeID');
 
     let imported = 0;
     let skipped = 0;
@@ -36,10 +38,28 @@ const TOS_IMPORT_APPROVER = {
       const rowNumber = item.rowNumber;
       const row = item.row;
 
-      const decision = this.getCell_(row, review.headers, 'Decision');
-      const groupId = this.getCell_(row, review.headers, 'DetectedGroupID');
+      const decision = String(this.getCell_(row, review.headers, 'Decision') || '').trim().toUpperCase();
+      const importDecision = String(this.getCell_(row, review.headers, 'ImportDecision') || '').trim().toUpperCase();
+      const reviewStatus = String(this.getCell_(row, review.headers, 'ReviewStatus') || '').trim().toUpperCase();
+      const groupId = String(this.getCell_(row, review.headers, 'DetectedGroupID') || '').trim();
 
-      if (String(decision).trim().toUpperCase() !== 'APPROVE') return;
+      Logger.log(
+        'Review row ' + rowNumber +
+        ' | Decision=[' + decision + ']' +
+        ' | ImportDecision=[' + importDecision + ']' +
+        ' | ReviewStatus=[' + reviewStatus + ']' +
+        ' | Group=[' + groupId + ']'
+      );
+
+      const isApproved =
+        decision === 'APPROVE' ||
+        decision === 'APPROVED' ||
+        importDecision === 'APPROVE' ||
+        importDecision === 'APPROVED' ||
+        reviewStatus === 'APPROVE' ||
+        reviewStatus === 'APPROVED';
+
+      if (!isApproved) return;
 
       const group = groupMap[groupId];
 
@@ -76,15 +96,13 @@ const TOS_IMPORT_APPROVER = {
   },
 
   appendMasterTrade_(sheet, headers, tradeId, group) {
-    const now = new Date();
-
     const values = {
       TradeID: tradeId,
       StrategyID: 'DDC',
       AccountID: this.first_(group.legs, 'accountId'),
       Symbol: group.symbol,
       WorkflowStatus: 'OPEN',
-      EntryDate: now,
+      EntryDate: new Date(),
       ExitDate: '',
       Lots: 1,
       EntrySource: 'IBKR_OPEN_POSITIONS',
@@ -177,10 +195,10 @@ const TOS_IMPORT_APPROVER = {
 
     for (let r = 1; r <= maxRows; r++) {
       const headers = sheet.getRange(r, 1, 1, maxCols).getValues()[0].map(h => String(h).trim());
-
       const ok = requiredHeaders.every(h => headers.indexOf(h) !== -1);
 
       if (ok) {
+        Logger.log(sheet.getName() + ' header row detected: ' + r);
         return {
           row: r,
           headers: headers
@@ -191,7 +209,7 @@ const TOS_IMPORT_APPROVER = {
     throw new Error('Could not find header row in sheet: ' + sheet.getName());
   },
 
-  getExistingIds_(sheet, table, idColumn) {
+  getExistingIds_(table, idColumn) {
     const map = {};
     const colIndex = table.headers.indexOf(idColumn);
 
