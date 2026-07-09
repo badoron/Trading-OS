@@ -16,7 +16,8 @@ const TOS_IMPORT_REVIEW_WRITER = {
     if (!sheet) throw new Error('Missing sheet: ' + this.SHEET_NAME);
 
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    const detectedGroupCol = headers.indexOf('DetectedGroupID') + 1;
+    const normalizedHeaders = headers.map(h => String(h).trim());
+    const detectedGroupCol = normalizedHeaders.indexOf('DetectedGroupID') + 1;
 
     if (detectedGroupCol <= 0) {
       throw new Error('Missing column: DetectedGroupID');
@@ -84,6 +85,7 @@ const TOS_IMPORT_REVIEW_WRITER = {
     };
 
     headers.forEach((header, index) => {
+      header = String(header).trim();
       if (Object.prototype.hasOwnProperty.call(values, header)) {
         row[index] = values[header];
       }
