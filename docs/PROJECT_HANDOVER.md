@@ -1,234 +1,91 @@
-Version: 3.0.0
-Status: End of Sprint 1
+# Trading OS — PROJECT HANDOVER
+
+Version: 4.0.0
+
+Status: MVP Completed
+
 Owner: Doron Ben Ari
 
-1. Project Vision
+---
 
-Trading OS is a professional personal trading operating system built specifically for options trading.
+# 1. Project Vision
 
-The goal is not to create another trading journal.
+Trading OS is a professional personal Trading Operating System built specifically for options trading.
 
-The system manages the entire trading lifecycle:
+The goal is **not** to create another trading journal.
 
+The goal is to manage the complete lifecycle of every options strategy.
+
+```
 Idea
-→ Scanner
-→ Playbook Validation
-→ Import from IBKR
-→ Import Review
-→ Trade Lifecycle
-→ Risk Management
-→ Analytics
-→ AI Coach
 
-Platform:
+↓
 
-Google Sheets (UI + Data)
-Google Apps Script (Business Logic)
-GitHub (Source Code)
-VS Code + clasp (Development)
-Interactive Brokers (Source of Truth)
-2. Current Architecture
-IBKR
-    │
-    ▼
-Broker Adapter      (Planned)
-    │
-    ▼
-Import Detector     (Planned)
-    │
-    ▼
-Strategy Classifier (Planned)
-    │
-    ▼
-Playbook Evaluator  (Planned)
-    │
-    ▼
-Recommendation Engine (Planned)
-    │
-    ▼
-IMPORT_REVIEW Sheet
-    │
-User Decision
-    │
-    ▼
-MASTER_TRADES
-    │
-    ▼
-Dashboard / Analytics / AI
-3. Completed (Sprint 1)
+Scanner
 
-Infrastructure
+↓
 
-GitHub repository
-VS Code
-Git configured
-clasp configured
-Apps Script linked
-Push/Pull working
+Playbook Validation
 
-Apps Script
+↓
 
-Logger
-Health Framework
-Constants
-Sheets Layer
-State Engine
-Playbook
-Import Review Inbox
+Import from IBKR
 
-UI
-
-Trading OS menu
-Health Check
-Import Review sheet
-
-Quality
-
-Health Check passes successfully.
-No Apps Script errors.
-Git workflow established.
-
-Documentation
-
-START_HERE.md
-PROJECT_BRAIN.md
-SESSION_STATE.md
-DECISIONS.md
-BACKLOG.md
-4. Core Design Decisions
-IBKR is the Source of Truth
-
-Broker data is authoritative for:
-
-Executions
-Positions
-Commissions
-Net P/L
-Cash
-Margin
-
-Internal calculations are estimates only.
-
-Trade != Position
-
-One Trade may contain many broker positions.
-
-A broker position belongs to only one Trade.
+↓
 
 Import Review
 
-Nothing enters MASTER_TRADES automatically.
+↓
 
-Every detected trade must first appear in IMPORT_REVIEW.
-
-The user chooses:
-
-Import
-Ignore
-Residual
-Ask Later
-Playbook
-
-Playbook never blocks trades.
-
-It only provides recommendations.
-
-User always has final authority.
-
-Overrides
-
-Manual override is fully supported.
-
-Playbook recommendations are advisory.
-
-Never Delete Trades
-
-Trades become:
-
-Archived
-Residual
-Ignored
-Closed
-Expired
-
-Nothing is physically deleted.
-
-Commissions
-
-Default:
-
-$1.50 per leg
-
-Configurable.
-
-Analytics should always prefer broker-reported commissions and net P/L.
-
-Wing Width
-
-Default Playbook recommendation:
-
-4
-
-However:
-
-The user requested this must remain configurable per trade.
-
-Playbook may warn but must never block import.
-
-5. Trading Philosophy
-
-Primary strategies:
-
-DDC
-Butterfly
-OTV
-TimeEdge
-
-Future:
-
-Calendar
-Diagonal
-Covered Call
-
-Risk is configurable.
-
-Current default risk unit:
-
-$400
-
-6. Import Workflow
-
-Future workflow:
-
-IBKR
+Trade Lifecycle
 
 ↓
 
-Broker Adapter
+Risk Management
 
 ↓
 
-Normalize Objects
+Performance Analytics
 
 ↓
 
-Position Grouper
+AI Coach
+```
+
+Platform
+
+- Google Sheets (Database + UI)
+- Google Apps Script (Business Logic)
+- GitHub (Source Control)
+- VS Code + clasp (Development)
+- Interactive Brokers (Source of Truth)
+
+---
+
+# 2. Current Architecture
+
+```
+IBKR Flex Query
 
 ↓
 
-Strategy Classifier
+XML Cache
 
 ↓
 
-Playbook Evaluation
+XML Parser
 
 ↓
 
-Commission Estimate
+Open Positions
 
 ↓
 
-Recommendation
+Strategy Engine
+
+↓
+
+Strategy Detector
 
 ↓
 
@@ -236,141 +93,349 @@ IMPORT_REVIEW
 
 ↓
 
-User Decision
+Manual Approval
 
 ↓
 
 MASTER_TRADES
-7. Important Functional Requirements
-Partial Close
 
-Must be fully supported.
+↓
 
-Trade remains open.
+TRADE_LEGS
 
-Remaining legs continue.
+↓
 
-Residual Legs
+Trade Monitor
 
-Residual positions should not distort strategy analytics.
+↓
 
-User decides whether to import.
+Dashboard / Analytics / AI
+```
 
-Full Close
+---
 
-The system should update:
+# 3. Completed (Sprint 1 MVP)
 
-Status
-Final Net P/L
-Broker commissions
-Close date
+## Infrastructure
 
-Automatically.
+- GitHub Repository
+- VS Code
+- clasp Integration
+- Google Apps Script
+- Logger
+- Health Framework
+- Configuration
 
-Future Sync
+---
 
-Goal:
+## IBKR Integration
 
-User presses one button:
+- Flex Client
+- XML Download
+- XML Cache
+- XML Parser
+- Open Position Parser
+- Execution Parser
 
-Sync IBKR
+---
 
-The system should:
+## Strategy Detection
 
-Read IBKR
-Detect changes
-Detect partial closes
-Detect new trades
-Detect expired trades
-Update dashboard automatically
-8. Folder Structure
+- Strategy Engine Foundation
+- DDC Detector
+- Stable StrategyID generation
+- Stable LegID generation
 
-Current:
+---
 
+## Workflow
+
+- IMPORT_REVIEW Writer
+- Manual Approval
+- Duplicate Protection
+- MASTER_TRADES Import
+- TRADE_LEGS Import
+
+---
+
+## Monitoring
+
+- Trade Monitor
+- Live Position Updates
+- Market Value Update
+- Unrealized PnL Update
+
+---
+
+## Documentation
+
+- START_HERE.md
+- PROJECT_BRAIN.md
+- SESSION_STATE.md
+- DECISIONS.md
+- PROJECT_HANDOVER.md
+- BACKLOG.md
+- README.md
+- Architecture.md
+- DDC.md
+
+---
+
+# 4. Core Design Decisions
+
+## Open Positions are the Source of Truth
+
+Trading OS detects active strategies from IBKR Open Positions.
+
+Historical Executions are NOT used to reconstruct active strategies.
+
+Executions will later be used for:
+
+- Entry
+- Exit
+- Realized PnL
+- Analytics
+
+---
+
+## Strategy != Broker Position
+
+A strategy consists of one or more broker positions.
+
+Examples
+
+- DDC → 4 option legs
+- OTV → 2 option legs
+- PMCC → 2 option legs
+
+---
+
+## Strategy Engine
+
+Every strategy owns its own detector.
+
+Current
+
+- DDC
+
+Planned
+
+- OTV
+- PMCC
+- Butterfly
+- TimeEdge
+
+Adding a new strategy should only require adding a detector.
+
+---
+
+## Import Review
+
+Nothing enters production automatically.
+
+Every detected strategy flows through:
+
+```
+IMPORT_REVIEW
+```
+
+The trader always decides.
+
+---
+
+## Manual Override
+
+Every recommendation may be overridden.
+
+Nothing blocks trading.
+
+---
+
+## Never Delete Trades
+
+Trades move through lifecycle states.
+
+Nothing is physically deleted.
+
+---
+
+# 5. Current Trading Philosophy
+
+Current implemented strategy
+
+- DDC
+
+Planned
+
+- OTV
+- PMCC
+- Butterfly
+- TimeEdge
+- Calendar
+- Sherman Tank
+
+Risk is configurable.
+
+---
+
+# 6. Current Workflow
+
+```
+IBKR
+
+↓
+
+Open Positions
+
+↓
+
+Strategy Engine
+
+↓
+
+Strategy Detector
+
+↓
+
+IMPORT_REVIEW
+
+↓
+
+Manual Approval
+
+↓
+
+MASTER_TRADES
+
+↓
+
+TRADE_LEGS
+
+↓
+
+Trade Monitor
+```
+
+---
+
+# 7. Current Functional Status
+
+Implemented
+
+- Detect active DDC strategies
+- Manual approval
+- Stable IDs
+- Duplicate prevention
+- Live Market Value
+- Live Unrealized PnL
+
+Not yet implemented
+
+- Closed Trade Detection
+- Exit Synchronization
+- Realized PnL
+- Rolling Detection
+- Partial Exit Detection
+
+---
+
+# 8. Folder Structure
+
+Current
+
+```
 src/
 
-Logger
+IBKR/
+Import/
+Monitor/
+Health/
+Logger/
+Sheets/
+Playbook/
+Utilities/
+```
 
-Health
+Future
 
-State
-
-Playbook
-
-Sheets
-
-Constants
-
-Import
-
-ImportDecision
-
-Code
-
-Future:
-
+```
 src/
 
 core/
-
 engine/
-
+strategies/
 repositories/
-
-ui/
-
+monitor/
 analytics/
+ui/
+```
 
-Refactoring planned later.
+---
 
-9. Sprint History
+# 9. Sprint History
 
-Sprint 1
+## Sprint 1
 
-Completed.
+Completed ✅
 
-Included:
+Included
 
-Infrastructure
-GitHub
-VS Code
-Apps Script
-Health
-Logger
-Playbook
-Import Review
-Documentation
-10. Current Sprint
+- Infrastructure
+- IBKR Integration
+- XML Parser
+- Strategy Engine Foundation
+- DDC Detector
+- IMPORT_REVIEW
+- Approval Workflow
+- MASTER_TRADES
+- TRADE_LEGS
+- Trade Monitor
+- Documentation
+
+---
+
+# 10. Current Sprint
 
 Sprint 2
 
-Status:
+Status
 
 READY TO START
 
-11. Sprint 2 Backlog
+---
 
-Priority order:
+# 11. Sprint 2 Backlog
 
-Broker Adapter
-Position Grouper
-Strategy Classifier
-Playbook Evaluator
-Commission Engine
-Recommendation Engine
-Import Inbox Writer
-Decision Engine
-Trade Repository
-12. Known Technical Debt
-Source folder should be split into modules.
-Replace hardcoded column indexes with mapping.
-Introduce Repository pattern.
-Business logic should not access sheets directly.
-Prefer objects instead of row arrays.
-13. Development Workflow
+Priority
 
-Standard workflow:
+1. Closed Trade Detection
+2. Exit Synchronization
+3. Workflow State Automation
+4. Realized PnL
+5. Partial Exit Support
 
+After that
+
+- OTV Detector
+- PMCC Detector
+- Butterfly Detector
+
+---
+
+# 12. Technical Debt
+
+- Repository Layer
+- Generic Strategy Interface
+- Unit Tests
+- Integration Tests
+- Configuration Repository
+- Plugin Registration
+
+---
+
+# 13. Development Workflow
+
+```
 Edit
 
 ↓
@@ -400,34 +465,51 @@ git commit
 ↓
 
 git push
-14. Release Rules
+```
 
-Before every release:
+---
 
-Health Check passes.
-No Apps Script errors.
-Git status clean.
-Commit performed.
-Push completed.
-SESSION_STATE updated if needed.
-BACKLOG updated if needed.
-DECISIONS updated if architecture changed.
-15. How to Resume This Project
+# 14. Release Rules
 
-Any future ChatGPT session should:
+Before every release
 
-Read:
-START_HERE.md
-PROJECT_BRAIN.md
-SESSION_STATE.md
-DECISIONS.md
-BACKLOG.md
-PROJECT_HANDOVER.md
-Verify current sprint.
-Continue from the first unfinished backlog item.
+- Health Check passes
+- No Apps Script errors
+- Git status clean
+- Commit completed
+- Push completed
 
-Current first unfinished item:
+Update when required
 
-TOS-001 – Broker Adapter
+- SESSION_STATE
+- PROJECT_BRAIN
+- DECISIONS
+- BACKLOG
+- CHANGELOG
+
+---
+
+# 15. How to Resume This Project
+
+Read in order
+
+1. START_HERE.md
+2. PROJECT_BRAIN.md
+3. SESSION_STATE.md
+4. DECISIONS.md
+5. PROJECT_HANDOVER.md
+6. BACKLOG.md
+
+After reading
+
+- Verify current sprint
+- Review current architecture
+- Continue from the first unfinished backlog item
+
+Current first priority
+
+**Closed Trade Detection**
 
 Do not redesign the architecture unless explicitly requested.
+
+Continue building on the existing Strategy Engine architecture.

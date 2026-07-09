@@ -1,22 +1,22 @@
 # Trading OS — SESSION STATE
 
-Last Updated: 2026-07-07
+Last Updated: 2026-07-10
 
 ---
 
 # Current Version
 
-3.0.0
+4.0.0
 
 ---
 
 # Current Sprint
 
-Sprint 1 — Foundation & Documentation
+Sprint 1 — MVP Completion
 
 Status:
 
-IN PROGRESS
+STABLE
 
 ---
 
@@ -24,85 +24,176 @@ IN PROGRESS
 
 ## Infrastructure
 
-- GitHub repository
-- VS Code workspace
-- clasp integration
+- GitHub Repository
+- VS Code Workspace
+- clasp Integration
 - Google Apps Script
-
-## Core
-
 - Logger
 - Health Framework
-- Constants
-- Sheets Layer
-- State Engine
-- Playbook Engine
+- Configuration
+- XML Cache
 
-## UI
+---
 
-- Trading OS menu
-- Health Check
-- Import Review Inbox
+## IBKR Integration
+
+- IBKR Flex Client
+- Flex XML Download
+- XML Parser
+- Open Positions Parser
+- Execution Parser
+
+---
+
+## Strategy Engine
+
+- Strategy Engine Foundation
+- DDC Detector
+- Stable StrategyID generation
+- Stable LegID generation
+
+---
+
+## Workflow
+
+- IMPORT_REVIEW Writer
+- Manual Approval Workflow
+- Duplicate Detection
+- MASTER_TRADES Import
+- TRADE_LEGS Import
+
+---
+
+## Monitoring
+
+- Trade Monitor
+- Live Position Synchronization
+- Market Value Update
+- Unrealized PnL Update
 
 ---
 
 # Current Work
 
-Building project documentation.
+System stabilization.
+
+Improving synchronization between:
+
+- IBKR
+- IMPORT_REVIEW
+- MASTER_TRADES
+- TRADE_LEGS
+
+Documentation has been updated to reflect the new Strategy Engine architecture.
 
 ---
 
 # Next Sprint
 
-Smart Import Engine
+Trade Lifecycle Management
 
 Modules:
 
-- Broker Adapter
-- Import Detector
-- Strategy Classifier
-- Playbook Scorer
-- Commission Estimator
-- Risk Estimator
+- Closed Trade Detection
+- Exit Synchronization
+- Workflow State Automation
+- Realized PnL
+- Partial Exit Support
 
 ---
 
 # Open Questions
 
-- Best import flow from IBKR
-- Broker Adapter architecture
+- Best method for detecting closed strategies
+- Exit workflow architecture
+- Handling rolling strategies
+- Partial close implementation
 - Assignment handling
-- Expiration workflow
 
 ---
 
 # Recent Decisions
 
-- IBKR is Source of Truth.
-- Commission configurable.
-- Playbook is advisory.
-- Manual approval required.
-- Trade != Position.
-- Never delete trades.
+- Open Positions are the Source of Truth for active trades.
+- Historical Executions are not used to reconstruct active positions.
+- Every strategy owns its own detector.
+- Strategy Engine executes all detectors.
+- IMPORT_REVIEW is mandatory before production import.
+- Manual approval is always required.
+- Stable StrategyID and LegID are mandatory.
+- Trade Monitor updates only active trades.
+- The architecture must support unlimited future strategies.
 
 ---
 
 # Known Issues
 
-None.
+IBKR Flex API occasionally returns:
+
+```
+Error 1001
+Statement could not be generated at this time.
+```
+
+This is an IBKR-side issue.
+
+The retry mechanism is working correctly.
 
 ---
 
 # Technical Debt
 
-Future refactoring:
+Future improvements:
 
-- Replace hardcoded column numbers with column mapping.
-- Split src into Core / Engine / UI / Repository.
-- Add automated QA validation.
+- Repository Layer
+- Configuration Repository
+- Strategy Plugin Registration
+- Generic Strategy Detector Interface
+- Automatic Health Tests
+- Unit Tests
+- Integration Tests
 
 ---
 
-# Next Task
+# Next Immediate Task
 
-Create Broker Adapter.
+Implement Closed Trade Detection.
+
+After that:
+
+1. Exit Synchronization
+2. Workflow State Automation
+3. Realized PnL
+4. OTV Detector
+5. PMCC Detector
+6. Butterfly Detector
+
+---
+
+# Current MVP Status
+
+✅ IBKR Connection
+
+✅ XML Cache
+
+✅ XML Parser
+
+✅ Open Position Parser
+
+✅ DDC Detector
+
+✅ IMPORT_REVIEW
+
+✅ Manual Approval
+
+✅ MASTER_TRADES
+
+✅ TRADE_LEGS
+
+✅ Trade Monitor
+
+✅ Live Synchronization
+
+✅ Duplicate Protection
+
+System is stable and ready to continue with Trade Lifecycle development.

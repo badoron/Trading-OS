@@ -1,6 +1,6 @@
 # Trading OS — PROJECT BRAIN
 
-Version: 3.0.0
+Version: 4.0.0
 
 ---
 
@@ -12,28 +12,36 @@ The goal is not to be another trading journal.
 
 The goal is to become the operating system that manages every stage of trading:
 
+```
 Idea
 ↓
 
 Scanner
+
 ↓
 
 Playbook Validation
+
 ↓
 
 Import from Broker
+
 ↓
 
 Trade Lifecycle
+
 ↓
 
 Risk Management
+
 ↓
 
 Performance Analytics
+
 ↓
 
 AI Coaching
+```
 
 ---
 
@@ -62,29 +70,49 @@ Trading OS never guesses.
 
 Whenever possible:
 
-IBKR is the Source of Truth.
-
-Manual decisions always override automation.
-
-Playbook is advisory.
-
-Nothing is deleted.
-
-Everything is traceable.
+- IBKR is the Source of Truth.
+- Open Positions are the Source of Truth for active trades.
+- Manual decisions always override automation.
+- Playbook is advisory.
+- Nothing is deleted.
+- Everything is traceable.
 
 ---
 
 # Core Principles
 
-1. Trade != Position
+## 1. Strategy != Position
 
-A Trade may consist of multiple broker positions.
+A Strategy consists of one or more broker positions.
 
-A broker position may belong to only one Trade.
+Every broker position belongs to one strategy only.
+
+Examples:
+
+- DDC = 4 option legs
+- OTV = 2 option legs
+- PMCC = 2 option legs
+- Butterfly = 4 option legs
 
 ---
 
-2. IBKR is the Source of Truth
+## 2. Open Positions are the Source of Truth
+
+Active trades are detected from IBKR Open Positions.
+
+Historical executions are NOT used to reconstruct active strategies.
+
+Executions are used only for:
+
+- Entry timestamps
+- Exit timestamps
+- Realized PnL
+- Historical analytics
+- Trade history
+
+---
+
+## 3. IBKR is the Source of Truth
 
 Final P/L
 
@@ -98,19 +126,23 @@ Expiration
 
 Cash
 
-Everything comes from IBKR.
+Open Positions
+
+Everything ultimately comes from IBKR.
 
 ---
 
-3. Manual Review Required
+## 4. Manual Review Required
 
-Every detected strategy enters Import Review.
+Every detected strategy enters IMPORT_REVIEW.
 
 Nothing enters MASTER_TRADES automatically.
 
+The trader always has final approval.
+
 ---
 
-4. Playbook
+## 5. Playbook
 
 Playbook never blocks trading.
 
@@ -120,7 +152,7 @@ The trader always decides.
 
 ---
 
-5. Override
+## 6. Override
 
 Any recommendation can be overridden.
 
@@ -128,57 +160,84 @@ Overrides are intentional and supported.
 
 ---
 
-6. Never Delete Trades
+## 7. Never Delete Trades
 
 Trades become:
 
-Archived
-
-Ignored
-
-Residual
-
-Expired
-
-Cancelled
+- Imported
+- Open
+- Closed
+- Expired
+- Archived
+- Ignored
 
 Nothing disappears.
 
 ---
 
-7. Configurable System
-
-Risk
-
-Commission
-
-Playbook thresholds
-
-Strategy limits
+## 8. Configurable System
 
 Everything should be configurable.
+
+Examples:
+
+- Risk Units
+- Commission
+- Playbook thresholds
+- Strategy parameters
+- Position sizing
+- Scanner thresholds
 
 ---
 
 # Architecture
 
-Google Sheets
+```
+IBKR
 
 ↓
 
-Apps Script
+IBKR Flex Query
 
 ↓
 
-Business Logic
+XML Cache
 
 ↓
 
-Import Engine
+XML Parser
 
 ↓
 
-Trade Repository
+Open Positions
+
+↓
+
+Strategy Engine
+
+↓
+
+Strategy Detector
+
+↓
+
+IMPORT_REVIEW
+
+↓
+
+Manual Approval
+
+↓
+
+MASTER_TRADES
+
+↓
+
+TRADE_LEGS
+
+↓
+
+Trade Monitor
 
 ↓
 
@@ -191,48 +250,77 @@ Analytics
 ↓
 
 AI Coach
+```
 
 ---
 
 # Main Modules
 
-Health
+## Infrastructure
 
-Logger
+- Health
+- Logger
+- Configuration
 
-State Engine
+---
 
-Playbook
+## IBKR Integration
 
-Import Review
+- IBKR Flex Client
+- XML Cache
+- XML Parser
 
-Sheets Layer
+---
 
-Configuration
+## Strategy Detection
 
-Broker Adapter (planned)
+- Strategy Engine
+- DDC Detector
 
-Import Detector (planned)
+Future:
 
-Strategy Classifier (planned)
+- OTV Detector
+- PMCC Detector
+- Butterfly Detector
+- TimeEdge Detector
 
-Analytics Engine (planned)
+---
 
-AI Coach (planned)
+## Workflow
+
+- Import Review Writer
+- Import Approver
+
+---
+
+## Monitoring
+
+- Trade Monitor
+
+---
+
+## Future Modules
+
+- Scanner
+- Risk Engine
+- Analytics Engine
+- AI Coach
+- Portfolio Engine
 
 ---
 
 # Trade Lifecycle
 
-IDEA
-
-↓
-
+```
 DETECTED
 
 ↓
 
-IMPORT REVIEW
+IMPORT_REVIEW
+
+↓
+
+APPROVED
 
 ↓
 
@@ -244,7 +332,7 @@ OPEN
 
 ↓
 
-PARTIAL CLOSE
+PARTIAL EXIT
 
 ↓
 
@@ -252,69 +340,105 @@ CLOSED
 
 ↓
 
-EXPIRED
-
-↓
-
 ARCHIVED
+```
 
 ---
 
 # Import Workflow
 
+```
 IBKR
 
 ↓
 
-Broker Adapter
+Open Positions
 
 ↓
 
-Position Grouping
+Strategy Engine
 
 ↓
 
-Strategy Classification
+Strategy Detector
 
 ↓
 
-Playbook Evaluation
+IMPORT_REVIEW
 
 ↓
 
-Risk Calculation
-
-↓
-
-Commission Estimation
-
-↓
-
-Recommendation
-
-↓
-
-Import Review
+Manual Approval
 
 ↓
 
 MASTER_TRADES
 
+↓
+
+TRADE_LEGS
+
+↓
+
+Trade Monitor
+```
+
+---
+
+# Strategy Architecture
+
+Every strategy has its own detector.
+
+Current:
+
+- DDC
+
+Planned:
+
+- OTV
+- PMCC
+- Butterfly
+- TimeEdge
+- Calendar Spread
+- Sherman Tank
+
+The Strategy Engine executes every detector independently.
+
+Adding a new strategy should require adding only a new detector.
+
 ---
 
 # Current Supported Strategies
 
-DDC
+## Fully Implemented
 
-Butterfly
+- DDC
 
-OTV
+## Planned
 
-TimeEdge
+- Butterfly
+- OTV
+- TimeEdge
+- PMCC
+- Calendar Spread
+- Sherman Tank
 
-Residual
+---
 
-Additional strategies will be added later.
+# Stable IDs
+
+Every strategy receives a deterministic StrategyID.
+
+Every option leg receives a deterministic LegID.
+
+These IDs never change.
+
+They guarantee:
+
+- Safe synchronization
+- Duplicate prevention
+- Reliable updates
+- Deterministic imports
 
 ---
 
@@ -322,13 +446,13 @@ Additional strategies will be added later.
 
 Broker commissions are considered the final source.
 
-Default configuration:
+Default:
 
 $1.50 per leg
 
-Configurable.
+Fully configurable.
 
-Analytics use broker net values.
+Analytics always use broker values.
 
 ---
 
@@ -338,24 +462,22 @@ Playbook provides guidance.
 
 Examples:
 
-Wing width
-
-Expected Move
-
-Liquidity
-
-Credit
-
-Risk
-
-Probability
+- Wing Width
+- Expected Move
+- Liquidity
+- Debit/Credit
+- Risk
+- Probability
 
 Nothing blocks the trade.
+
+The trader always decides.
 
 ---
 
 # Development Workflow
 
+```
 VS Code
 
 ↓
@@ -368,7 +490,7 @@ clasp push
 
 ↓
 
-Google Sheets
+Apps Script
 
 ↓
 
@@ -381,6 +503,7 @@ Git Commit
 ↓
 
 Git Push
+```
 
 ---
 
@@ -398,63 +521,68 @@ Prefer repositories over direct sheet access.
 
 Prefer objects over row arrays.
 
+Every module should have a single responsibility.
+
+Every strategy detector must be independent.
+
 ---
 
 # Long-Term Vision
 
 Trading OS should eventually support:
 
-IBKR Synchronization
-
-Scanner
-
-Trade Management
-
-Performance Analytics
-
-Risk Analytics
-
-Portfolio View
-
-AI Recommendations
-
-AI Trade Review
-
-Backtesting
-
-Position Simulator
-
-Mobile Dashboard
-
-Multi-Broker Support
+- IBKR Synchronization
+- Strategy Detection
+- Scanner
+- Trade Management
+- Performance Analytics
+- Risk Analytics
+- Portfolio View
+- AI Recommendations
+- AI Trade Review
+- Backtesting
+- Position Simulator
+- Mobile Dashboard
+- Multi-Broker Support
 
 ---
 
 # Current Project Status
 
-Infrastructure:
-Completed
+## Completed
 
-Import Review:
-Completed (MVP)
+- IBKR Flex Client
+- XML Cache
+- XML Parser
+- Open Position Parser
+- Strategy Engine (Foundation)
+- DDC Detector
+- IMPORT_REVIEW
+- Manual Approval Workflow
+- MASTER_TRADES
+- TRADE_LEGS
+- Trade Monitor
+- Live Synchronization
+- Duplicate Protection
+- Logger
+- Health Framework
+- GitHub Integration
+- Apps Script Sync
 
-Logger:
-Completed
+---
 
-Health Framework:
-Completed
+## Current Sprint
 
-State Engine:
-Completed
+MVP Stabilization
 
-GitHub Integration:
-Completed
+---
 
-Apps Script Sync:
-Completed
+## Next Tasks
 
-Current Sprint:
-Smart Import Engine
-
-Current Next Task:
-Broker Adapter
+1. Closed Trade Detection
+2. Exit Synchronization
+3. Workflow State Automation
+4. Realized PnL
+5. OTV Detector
+6. PMCC Detector
+7. Butterfly Detector

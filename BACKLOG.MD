@@ -1,231 +1,279 @@
-# Trading OS - Product Backlog
+# BACKLOG
 
-Last Updated: 2026-07-07
+Version: 4.0.0
 
----
+This document contains all remaining work for Trading OS.
 
-# Current Version
-
-3.0.0
+Completed items are removed from the active backlog and documented in CHANGELOG.md.
 
 ---
 
-# Current Sprint
+# Sprint 2 — Trade Lifecycle
 
-Sprint 2 – Smart Import Engine
+Status: NEXT
 
-Status:
-READY TO START
+## High Priority
 
----
+### TOS-201
 
-# Sprint 2
+Closed Trade Detection
 
-## TOS-001 — Broker Adapter
-Priority: Critical
+Status
 
-Status: Planned
+TODO
 
-Goal:
-Normalize IBKR data into Trading OS objects.
+Description
 
-Acceptance Criteria:
-- Read broker positions
-- Read executions
-- Parse option contracts
-- Parse stock positions
-- Normalize dates
-- Normalize quantities
-- Normalize commissions
+Detect when an imported strategy no longer exists in IBKR Open Positions.
+
+Expected Result
+
+- WorkflowStatus = CLOSED
+- ExitDate populated
+- Monitoring stops
+- Trade remains in history
 
 ---
 
-## TOS-002 — Position Grouper
+### TOS-202
 
-Priority: Critical
+Exit Synchronization
 
-Status: Planned
+Status
 
-Goal:
-Group broker positions into logical trades.
+TODO
 
-Examples:
+Description
 
-DDC
+Synchronize closed trades using IBKR executions.
 
-Butterfly
+Expected Result
 
-Iron Condor
-
-Residual
-
----
-
-## TOS-003 — Strategy Classifier
-
-Priority: Critical
-
-Status: Planned
-
-Goal:
-Detect trading strategy automatically.
-
-Supported:
-
-DDC
-
-Butterfly
-
-OTV
-
-Residual
-
-Future:
-
-Calendar
-
-Diagonal
-
-Covered Call
+- Exit Price
+- Exit Date
+- Broker Commission
+- Realized PnL
 
 ---
 
-## TOS-004 — Playbook Evaluator
+### TOS-203
 
-Priority: High
+Workflow State Engine
 
-Status: Planned
+Status
 
-Goal:
+TODO
 
-Calculate Playbook Score.
+Description
 
-Check:
+Automatic transitions between
 
-Risk
+DETECTED
 
-Wing Width
+↓
 
-Expected Move
+APPROVED
 
-Credit
+↓
 
-Liquidity
+IMPORTED
 
-Probability
+↓
 
----
+OPEN
 
-## TOS-005 — Commission Engine
+↓
 
-Priority: High
+PARTIAL_EXIT
 
-Status: Planned
+↓
 
-Goal:
+CLOSED
 
-Estimate commissions.
+↓
 
-Compare estimate vs broker.
-
-Default:
-
-$1.50 per leg
-
-Configurable.
+ARCHIVED
 
 ---
 
-## TOS-006 — Recommendation Engine
+### TOS-204
 
-Priority: High
+Partial Exit Detection
 
-Status: Planned
+Status
 
-Recommendations:
+TODO
 
-IMPORT
+Description
 
-IGNORE
+Support DDC partial exits.
 
-RESIDUAL
+Business Rule
 
-ASK_LATER
+Closing the short legs marks the strategy as completed.
 
----
-
-## TOS-007 — Import Inbox
-
-Priority: High
-
-Status: Planned
-
-Goal:
-
-Populate IMPORT_REVIEW.
+Remaining long legs are ignored after completion.
 
 ---
 
-## TOS-008 — Decision Engine
+### TOS-205
 
-Priority: High
+Residual Position Handling
 
-Status: Planned
+Status
 
-Goal:
+TODO
 
-User approves:
+Description
 
-Import
+Detect remaining contracts after strategy completion.
 
-Ignore
+Allow:
 
-Residual
-
-Ask Later
-
----
-
-## TOS-009 — Trade Repository
-
-Priority: Critical
-
-Status: Planned
-
-Goal:
-
-Create / Update MASTER_TRADES.
-
-Support:
-
-Open
-
-Partial Close
-
-Closed
-
-Expired
-
-Residual
-
-Archived
+- Ignore
+- Archive
+- Convert to Residual
 
 ---
 
-# Future Backlog
+# Sprint 3 — Strategy Expansion
 
-## Dashboard Live
+Status: PLANNED
 
-## Analytics Engine
+### TOS-301
 
-## Compounding Engine
+OTV Detector
 
-## Scanner
+---
 
-## AI Coach
+### TOS-302
 
-## Portfolio Analytics
+PMCC Detector
 
-## Mobile Dashboard
+---
 
-## Multi Broker Support
+### TOS-303
+
+Butterfly Detector
+
+---
+
+### TOS-304
+
+TimeEdge Detector
+
+---
+
+### TOS-305
+
+Strategy Plugin Registration
+
+---
+
+### TOS-306
+
+Generic Strategy Engine
+
+---
+
+# Sprint 4 — Analytics
+
+Status: PLANNED
+
+### TOS-401
+
+Dashboard
+
+---
+
+### TOS-402
+
+Portfolio Analytics
+
+---
+
+### TOS-403
+
+Risk Engine
+
+---
+
+### TOS-404
+
+Compounding Engine
+
+---
+
+### TOS-405
+
+Performance Analytics
+
+---
+
+### TOS-406
+
+AI Trade Reviews
+
+---
+
+# Technical Debt
+
+## TD-001
+
+Repository Layer
+
+Replace direct sheet access with repositories.
+
+---
+
+## TD-002
+
+Configuration Repository
+
+Move all configurable values into configuration services.
+
+---
+
+## TD-003
+
+Unit Tests
+
+Create automated unit tests.
+
+---
+
+## TD-004
+
+Integration Tests
+
+End-to-end synchronization tests.
+
+---
+
+## TD-005
+
+Plugin Registration
+
+Automatic detector registration.
+
+---
+
+# Completed (Moved to CHANGELOG)
+
+Sprint 1 MVP
+
+- IBKR Flex Client
+- XML Cache
+- XML Parser
+- Open Position Parser
+- Strategy Engine Foundation
+- DDC Detector
+- Stable Strategy IDs
+- Stable Leg IDs
+- IMPORT_REVIEW
+- Manual Approval
+- MASTER_TRADES
+- TRADE_LEGS
+- Trade Monitor
+- Live Synchronization
+- Duplicate Protection
