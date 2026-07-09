@@ -15,15 +15,13 @@ const TOS_IMPORT_REVIEW_WRITER = {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(this.SHEET_NAME);
     if (!sheet) throw new Error('Missing sheet: ' + this.SHEET_NAME);
 
-    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    const normalizedHeaders = headers.map(h => String(h).trim());
-    const detectedGroupCol = normalizedHeaders.indexOf('DetectedGroupID') + 1;
+    const headerInfo = this.findHeaderRow_(sheet);
+    const headers = headerInfo.headers;
+    const headerRow = headerInfo.row;
 
-    if (detectedGroupCol <= 0) {
-      throw new Error('Missing column: DetectedGroupID');
-    }
+    const detectedGroupCol = this.findColumn_(headers, 'DetectedGroupID');
 
-    const existingMap = this.buildExistingMap_(sheet, detectedGroupCol);
+    const existingMap = this.buildExistingMap_(sheet, detectedGroupCol, headerRow);
 
     let inserted = 0;
     let updated = 0;
@@ -41,21 +39,44 @@ const TOS_IMPORT_REVIEW_WRITER = {
     });
 
     Logger.log('DDC Import Review upsert completed. Inserted=' + inserted + ', Updated=' + updated);
-
     return inserted + updated;
   },
 
-  buildExistingMap_(sheet, detectedGroupCol) {
+  findHeaderRow_(sheet) {
+    const maxRows = Math.min(sheet.getLastRow(), 20);
+    const maxCols = sheet.getLastColumn();
+
+    for (let r = 1; r <= maxRows; r++) {
+      const headers = sheet.getRange(r, 1, 1, maxCols).getValues()[0].map(h => String(h).trim());
+
+      if (headers.indexOf('ReviewID') !== -1 && headers.indexOf('DetectedGroupID') !== -1) {
+        Logger.log('IMPORT_REVIEW header row detected: ' + r);
+        return { row: r, headers: headers };
+      }
+    }
+
+    throw new Error('Could not find IMPORT_REVIEW header row with ReviewID and DetectedGroupID.');
+  },
+
+  findColumn_(headers, name) {
+    const col = headers.indexOf(name) + 1;
+    if (col <= 0) throw new Error('Missing column: ' + name);
+    return col;
+  },
+
+  buildExistingMap_(sheet, detectedGroupCol, headerRow) {
     const map = {};
     const lastRow = sheet.getLastRow();
 
-    if (lastRow < 2) return map;
+    if (lastRow <= headerRow) return map;
 
-    const values = sheet.getRange(2, detectedGroupCol, lastRow - 1, 1).getValues();
+    const values = sheet
+      .getRange(headerRow + 1, detectedGroupCol, lastRow - headerRow, 1)
+      .getValues();
 
     values.forEach((row, index) => {
-      const id = row[0];
-      if (id) map[id] = index + 2;
+      const id = String(row[0] || '').trim();
+      if (id) map[id] = headerRow + 1 + index;
     });
 
     return map;
@@ -85,7 +106,6 @@ const TOS_IMPORT_REVIEW_WRITER = {
     };
 
     headers.forEach((header, index) => {
-      header = String(header).trim();
       if (Object.prototype.hasOwnProperty.call(values, header)) {
         row[index] = values[header];
       }
