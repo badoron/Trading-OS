@@ -47,26 +47,50 @@ testParse() {
   }
 
   const parsed = this.parse(xml);
+  const trades = parsed.trades || [];
+  const openPositions = parsed.openPositions || [];
 
   Logger.log('============================');
   Logger.log('IBKR FLEX PARSER');
   Logger.log('============================');
 
-  Logger.log('Trades count: ' + (parsed.trades || []).length);
-  Logger.log('OpenPositions count: ' + (parsed.openPositions || []).length);
+  Logger.log('Trades count: ' + trades.length);
+  Logger.log('OpenPositions count: ' + openPositions.length);
   Logger.log('AccountInfo count: ' + (parsed.accountInfo || []).length);
+
+  Logger.log('============================');
+  Logger.log('TRADES');
+  Logger.log('============================');
+
+  trades.forEach((t, i) => {
+    Logger.log(
+      'TRD #' + (i + 1) +
+      ' | Symbol=' + (t.underlyingSymbol || '') +
+      ' | Exp=' + (t.expiry || '') +
+      ' | ' + (t.putCall || '') + ' ' + (t.strike || '') +
+      ' | BuySell=' + (t.buySell || '') +
+      ' | Qty=' + (t.quantity || '') +
+      ' | OpenClose=' + (t.openCloseIndicator || '') +
+      ' | Type=' + (t.transactionType || '') +
+      ' | Price=' + (t.tradePrice || '') +
+      ' | NetCash=' + (t.netCash || '') +
+      ' | Commission=' + (t.ibCommission || '') +
+      ' | Notes=' + (t.notes || '') +
+      ' | DateTime=' + (t.dateTime || '') +
+      ' | Conid=' + (t.conid || '')
+    );
+  });
 
   Logger.log('============================');
   Logger.log('OPEN POSITIONS');
   Logger.log('============================');
 
-  (parsed.openPositions || []).forEach((p, i) => {
+  openPositions.forEach((p, i) => {
     Logger.log(
       'POS #' + (i + 1) +
       ' | Symbol=' + (p.underlyingSymbol || '') +
       ' | Exp=' + (p.expiry || '') +
-      ' | ' + (p.putCall || '') +
-      ' ' + (p.strike || '') +
+      ' | ' + (p.putCall || '') + ' ' + (p.strike || '') +
       ' | Side=' + (p.side || '') +
       ' | Position=' + (p.position || '') +
       ' | Cost=' + (p.costBasisMoney || '') +
