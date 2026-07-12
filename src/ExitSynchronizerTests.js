@@ -36,7 +36,11 @@ function testExitSynchronizerUnitTests() {
           );
 
         exitAssertEqual_(1, result.length, 'matched trades');
-        exitAssertEqual_('1.25', result[0].tradePrice, 'tradePrice');
+        exitAssertEqual_(
+          '1.25',
+          result[0].tradePrice,
+          'tradePrice'
+        );
       }
     },
     {
@@ -188,7 +192,11 @@ function testExitSynchronizerUnitTests() {
             trades
           );
 
-        exitAssertEqual_(true, result.fullyMatched, 'fullyMatched');
+        exitAssertEqual_(
+          true,
+          result.fullyMatched,
+          'fullyMatched'
+        );
         exitAssertEqual_(2, result.matchedLegs, 'matchedLegs');
         exitAssertEqual_(2, result.totalLegs, 'totalLegs');
         exitAssertEqual_(50, result.realizedPnL, 'realizedPnL');
@@ -232,9 +240,138 @@ function testExitSynchronizerUnitTests() {
             trades
           );
 
-        exitAssertEqual_(false, result.fullyMatched, 'fullyMatched');
+        exitAssertEqual_(
+          false,
+          result.fullyMatched,
+          'fullyMatched'
+        );
         exitAssertEqual_(1, result.matchedLegs, 'matchedLegs');
         exitAssertEqual_(2, result.totalLegs, 'totalLegs');
+      }
+    },
+    {
+      name: 'preview includes only trades pending exit sync',
+      run: function () {
+        const masterTrades = [
+          {
+            tradeId: 'TRD-OPEN',
+            strategyId: 'DDC',
+            workflowStatus: 'OPEN'
+          },
+          {
+            tradeId: 'TRD-PENDING',
+            strategyId: 'DDC',
+            workflowStatus: 'CLOSED_PENDING_EXIT_SYNC'
+          },
+          {
+            tradeId: 'TRD-CLOSED',
+            strategyId: 'DDC',
+            workflowStatus: 'CLOSED'
+          }
+        ];
+
+        const legsByTradeId = {
+          'TRD-PENDING': [
+            {
+              brokerContractId: '501',
+              longShort: 'SHORT',
+              quantity: '-1'
+            }
+          ]
+        };
+
+        const trades = [
+          {
+            conid: '501',
+            buySell: 'BUY',
+            quantity: '1',
+            openCloseIndicator: 'C',
+            tradePrice: '0.50',
+            dateTime: '20260711;154500',
+            ibCommission: '-0.65',
+            fifoPnlRealized: '40'
+          }
+        ];
+
+        const result =
+          TOS_EXIT_SYNCHRONIZER.buildPreview_(
+            masterTrades,
+            legsByTradeId,
+            trades
+          );
+
+        exitAssertEqual_(1, result.length, 'preview count');
+        exitAssertEqual_(
+          'TRD-PENDING',
+          result[0].tradeId,
+          'tradeId'
+        );
+        exitAssertEqual_(
+          true,
+          result[0].fullyMatched,
+          'fullyMatched'
+        );
+      }
+    },
+    {
+      name: 'preview reports missing legs without closing trade',
+      run: function () {
+        const masterTrades = [
+          {
+            tradeId: 'TRD-PENDING',
+            strategyId: 'DDC',
+            workflowStatus: 'CLOSED_PENDING_EXIT_SYNC'
+          }
+        ];
+
+        const legsByTradeId = {
+          'TRD-PENDING': [
+            {
+              brokerContractId: '601',
+              longShort: 'SHORT',
+              quantity: '-1'
+            },
+            {
+              brokerContractId: '602',
+              longShort: 'LONG',
+              quantity: '1'
+            }
+          ]
+        };
+
+        const trades = [
+          {
+            conid: '601',
+            buySell: 'BUY',
+            quantity: '1',
+            openCloseIndicator: 'C',
+            fifoPnlRealized: '30'
+          }
+        ];
+
+        const result =
+          TOS_EXIT_SYNCHRONIZER.buildPreview_(
+            masterTrades,
+            legsByTradeId,
+            trades
+          );
+
+        exitAssertEqual_(1, result.length, 'preview count');
+        exitAssertEqual_(
+          false,
+          result[0].fullyMatched,
+          'fullyMatched'
+        );
+        exitAssertEqual_(
+          1,
+          result[0].matchedLegs,
+          'matchedLegs'
+        );
+        exitAssertEqual_(
+          2,
+          result[0].totalLegs,
+          'totalLegs'
+        );
       }
     }
   ];
@@ -247,6 +384,7 @@ function testExitSynchronizerUnitTests() {
       Logger.log('PASS: ' + test.name);
     } catch (error) {
       failures.push(test.name + ': ' + error.message);
+
       Logger.log(
         'FAIL: ' + test.name + ' | ' + error.message
       );

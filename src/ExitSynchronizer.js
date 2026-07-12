@@ -144,6 +144,62 @@ const TOS_EXIT_SYNCHRONIZER = {
   },
 
   /**
+   * Builds a read-only preview for trades waiting for exit sync.
+   *
+   * Only MASTER_TRADES rows with workflow status
+   * CLOSED_PENDING_EXIT_SYNC are included.
+   *
+   * @param {Object[]} masterTrades Normalized MASTER_TRADES rows.
+   * @param {Object} legsByTradeId Trade legs grouped by TradeID.
+   * @param {Object[]} trades Parsed IBKR trades.
+   * @return {Object[]} Exit sync preview rows.
+   */
+  buildPreview_(masterTrades, legsByTradeId, trades) {
+    const safeMasterTrades = masterTrades || [];
+    const safeLegsByTradeId = legsByTradeId || {};
+    const safeTrades = trades || [];
+
+    return safeMasterTrades
+      .filter(masterTrade => {
+        return (
+          this.text_(
+            masterTrade && masterTrade.workflowStatus
+          ).toUpperCase() ===
+          'CLOSED_PENDING_EXIT_SYNC'
+        );
+      })
+      .map(masterTrade => {
+        const tradeId = this.text_(
+          masterTrade && masterTrade.tradeId
+        );
+
+        const legs =
+          safeLegsByTradeId[tradeId] || [];
+
+        const summary =
+          this.summarizeClosedTrade_(
+            legs,
+            safeTrades
+          );
+
+        return {
+          tradeId: tradeId,
+
+          strategyId: this.text_(
+            masterTrade && masterTrade.strategyId
+          ),
+
+          fullyMatched: summary.fullyMatched,
+          matchedLegs: summary.matchedLegs,
+          totalLegs: summary.totalLegs,
+          realizedPnL: summary.realizedPnL,
+          commission: summary.commission,
+          exitDateTime: summary.exitDateTime
+        };
+      });
+  },
+
+  /**
    * Safely converts values to trimmed strings.
    *
    * @param {*} value Any value.
