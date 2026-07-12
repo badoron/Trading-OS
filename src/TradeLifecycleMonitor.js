@@ -10,6 +10,10 @@
  *
  * A trade is never considered fully closed while any original leg
  * is still present in IBKR Open Positions.
+ *
+ * ExitDate is not updated by this module.
+ * The real exit timestamp must come from IBKR trades/executions
+ * during the Exit Sync stage.
  */
 
 const TOS_TRADE_LIFECYCLE_MONITOR = {
@@ -149,7 +153,7 @@ const TOS_TRADE_LIFECYCLE_MONITOR = {
 
     let status;
     let exitReason = '';
-    let setExitDate = false;
+    const setExitDate = false;
 
     if (openLegs.length === totalLegs) {
       status = 'OPEN';
@@ -164,7 +168,6 @@ const TOS_TRADE_LIFECYCLE_MONITOR = {
       status = 'CLOSED_PENDING_EXIT_SYNC';
       exitReason =
         'All original trade legs are absent from IBKR Open Positions. Exit synchronization is required.';
-      setExitDate = true;
     }
 
     return {
@@ -196,32 +199,9 @@ const TOS_TRADE_LIFECYCLE_MONITOR = {
       lifecycle.exitReason
     );
 
-    if (lifecycle.status === 'CLOSED_PENDING_EXIT_SYNC') {
-      const existingExitDate = this.getSheetCell_(
-        sheet,
-        rowNumber,
-        headers,
-        'ExitDate'
-      );
-
-      if (!existingExitDate) {
-        this.setCell_(
-          sheet,
-          rowNumber,
-          headers,
-          'ExitDate',
-          new Date()
-        );
-      }
-    } else {
-      this.setCell_(
-        sheet,
-        rowNumber,
-        headers,
-        'ExitDate',
-        ''
-      );
-    }
+    // ExitDate is intentionally not updated here.
+    // The real exit timestamp must come from IBKR trades/executions
+    // during the Exit Sync stage.
   },
 
   buildOpenConidMap_(positions) {
