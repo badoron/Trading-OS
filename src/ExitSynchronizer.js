@@ -554,15 +554,19 @@ const TOS_EXIT_SYNCHRONIZER = {
     );
 
     const legsTable = this.getTable_(
-      legsSheet,
-      [
-        'TradeID',
-        'BrokerContractID',
-        'LongShort',
-        'Quantity',
-        'LegStatus'
-      ]
-    );
+  legsSheet,
+  [
+    'TradeID',
+    'BrokerContractID',
+    'LongShort',
+    'Quantity',
+    'LegStatus',
+    'ExitPrice',
+    'ExitDateTime',
+    'RealizedPnL',
+    'Commission'
+  ]
+);
 
     return {
       masterTrades:
@@ -612,57 +616,81 @@ const TOS_EXIT_SYNCHRONIZER = {
   },
 
   normalizeLegsByTradeId_(table) {
-    const map = {};
+  const map = {};
 
-    table.rows.forEach(item => {
-      const tradeId = this.text_(
-        this.getCell_(
-          item.row,
-          table.headers,
-          'TradeID'
-        )
-      );
+  table.rows.forEach(item => {
+    const tradeId = this.text_(
+      this.getCell_(
+        item.row,
+        table.headers,
+        'TradeID'
+      )
+    );
 
-      if (!tradeId) {
-        return;
-      }
+    if (!tradeId) {
+      return;
+    }
 
-      if (!map[tradeId]) {
-        map[tradeId] = [];
-      }
+    if (!map[tradeId]) {
+      map[tradeId] = [];
+    }
 
-      map[tradeId].push({
-        rowNumber: item.rowNumber,
-        tradeId: tradeId,
+    map[tradeId].push({
+      rowNumber: item.rowNumber,
+      tradeId: tradeId,
 
-        brokerContractId: this.getCell_(
-          item.row,
-          table.headers,
-          'BrokerContractID'
-        ),
+      brokerContractId: this.getCell_(
+        item.row,
+        table.headers,
+        'BrokerContractID'
+      ),
 
-        longShort: this.getCell_(
-          item.row,
-          table.headers,
-          'LongShort'
-        ),
+      longShort: this.getCell_(
+        item.row,
+        table.headers,
+        'LongShort'
+      ),
 
-        quantity: this.getCell_(
-          item.row,
-          table.headers,
-          'Quantity'
-        ),
+      quantity: this.getCell_(
+        item.row,
+        table.headers,
+        'Quantity'
+      ),
 
-        legStatus: this.getCell_(
-          item.row,
-          table.headers,
-          'LegStatus'
-        )
-      });
+      legStatus: this.getCell_(
+        item.row,
+        table.headers,
+        'LegStatus'
+      ),
+
+      exitPrice: this.getCell_(
+        item.row,
+        table.headers,
+        'ExitPrice'
+      ),
+
+      exitDateTime: this.getCell_(
+        item.row,
+        table.headers,
+        'ExitDateTime'
+      ),
+
+      realizedPnL: this.getCell_(
+        item.row,
+        table.headers,
+        'RealizedPnL'
+      ),
+
+      commission: this.getCell_(
+        item.row,
+        table.headers,
+        'Commission'
+      )
     });
+  });
 
-    return map;
-  },
+  return map;
+},
 
   getTable_(sheet, requiredHeaders) {
     const headerInfo = this.findHeaderRow_(
