@@ -82,6 +82,70 @@ const TOS_HOME_BUILDER = {
   },
 
   /**
+   * Builds account summary rows for HOME.
+   *
+   * @param {Object} accountInfo Latest normalized account snapshot.
+   * @return {Array[]} Account summary rows.
+   */
+  buildAccountRows_(accountInfo) {
+    const safeAccount =
+      accountInfo || {};
+
+    return [
+      [
+        'Net Liquidation',
+        this.number_(
+          safeAccount.netLiquidation
+        )
+      ],
+      [
+        'Cash',
+        this.number_(
+          safeAccount.totalCashValue
+        )
+      ],
+      [
+        'Options Value',
+        this.number_(
+          safeAccount.optionsValue
+        )
+      ],
+      [
+        'Report Date',
+        this.formatReportDate_(
+          safeAccount.reportDate
+        )
+      ]
+    ];
+  },
+
+  /**
+   * Formats an IBKR report date from YYYYMMDD to YYYY-MM-DD.
+   *
+   * @param {*} value IBKR report date.
+   * @return {string} Formatted date.
+   */
+  formatReportDate_(value) {
+    const normalized =
+      this.text_(value).replace(
+        /[^0-9]/g,
+        ''
+      );
+
+    if (normalized.length !== 8) {
+      return this.text_(value);
+    }
+
+    return (
+      normalized.substring(0, 4) +
+      '-' +
+      normalized.substring(4, 6) +
+      '-' +
+      normalized.substring(6, 8)
+    );
+  },
+
+  /**
    * Builds alerts that require user attention.
    *
    * @param {Object} model Dashboard model.
