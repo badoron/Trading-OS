@@ -106,33 +106,72 @@ const TOS_LEG_EXIT_WRITER = {
    *
    * @return {Object} Synchronization summary.
    */
-  syncClosedLegsFromIBKR() {
-    const ss =
-      SpreadsheetApp.getActiveSpreadsheet();
+ /**
+ * Backward-compatible production entry point.
+ *
+ * Loads the normalized broker snapshot and delegates
+ * to the snapshot-aware implementation.
+ *
+ * @return {Object} Synchronization summary.
+ */
+syncClosedLegsFromIBKR() {
+  const snapshot =
+    TOS_BROKER_SNAPSHOT_SERVICE.load();
 
-    const legsSheet =
-      ss.getSheetByName(this.TRADE_LEGS);
+  return this.syncClosedLegsFromSnapshot_(
+    snapshot
+  );
+},
 
-    if (!legsSheet) {
-      throw new Error(
-        'Missing sheet: ' + this.TRADE_LEGS
+/**
+ * Runs the real incremental leg synchronization
+ * using an already loaded broker snapshot.
+ *
+ * Writes:
+ * - Closed-leg fields in TRADE_LEGS only
+ *
+ * @param {Object} snapshot Normalized broker snapshot.
+ * @return {Object} Synchronization summary.
+ */
+syncClosedLegsFromSnapshot_(snapshot) {
+  if (!snapshot) {
+    throw new Error(
+      'Broker snapshot is required.'
+    );
+  }
+
+  const ss =
+    SpreadsheetApp.getActiveSpreadsheet();
+
+  const legsSheet =
+    ss.getSheetByName(
+      this.TRADE_LEGS
+    );
+
+  if (!legsSheet) {
+    throw new Error(
+      'Missing sheet: ' +
+      this.TRADE_LEGS
+    );
+  }
+
+  const data =
+    TOS_EXIT_SYNCHRONIZER
+      .loadDataFromSheets_(
+        snapshot
       );
-    }
 
-    const data =
-      TOS_EXIT_SYNCHRONIZER
-        .loadDataFromSheets_();
+  const updates =
+    TOS_EXIT_SYNCHRONIZER
+      .buildLegExitPreview_(
+        data.masterTrades,
+        data.legsByTradeId,
+        data.trades
+      );
 
-    const updates =
-      TOS_EXIT_SYNCHRONIZER
-        .buildLegExitPreview_(
-          data.masterTrades,
-          data.legsByTradeId,
-          data.trades
-        );
-
-    const table =
-      TOS_EXIT_SYNCHRONIZER.getTable_(
+  const table =
+    TOS_EXIT_SYNCHRONIZER
+      .getTable_(
         legsSheet,
         [
           'TradeID',
@@ -145,68 +184,80 @@ const TOS_LEG_EXIT_WRITER = {
         ]
       );
 
-    const writeResult = this.applyUpdates_(
+  const writeResult =
+    this.applyUpdates_(
       legsSheet,
       table.headers,
       updates
     );
 
+  Logger.log(
+    '========================================'
+  );
+
+  Logger.log(
+    'DDC LEG EXIT SYNC'
+  );
+
+  Logger.log(
+    '========================================'
+  );
+
+  Logger.log(
+    'ProposedUpdates=' +
+    updates.length
+  );
+
+  updates.forEach(update => {
     Logger.log(
-      '========================================'
+      'TradeID=' +
+      update.tradeId +
+      ' | BrokerContractID=' +
+      update.brokerContractId +
+      ' | SheetRow=' +
+      update.rowNumber +
+      ' | LegStatus=' +
+      update.legStatus +
+      ' | ExitType=' +
+      update.exitType +
+      ' | ExitPrice=' +
+      update.exitPrice +
+      ' | ExitDateTime=' +
+      update.exitDateTime +
+      ' | RealizedPnL=' +
+      update.realizedPnL +
+      ' | Commission=' +
+      update.commission
     );
+  });
 
-    Logger.log('DDC LEG EXIT SYNC');
+  Logger.log(
+    'Leg exit sync completed.' +
+    ' Updated=' +
+    writeResult.updated +
+    ', Skipped=' +
+    writeResult.skipped +
+    ', WritesPerformed=' +
+    writeResult.writesPerformed
+  );
 
-    Logger.log(
-      '========================================'
-    );
+  return {
+    proposedUpdates:
+      updates.length,
 
-    Logger.log(
-      'ProposedUpdates=' + updates.length
-    );
+    updated:
+      writeResult.updated,
 
-    updates.forEach(update => {
-      Logger.log(
-        'TradeID=' +
-        update.tradeId +
-        ' | BrokerContractID=' +
-        update.brokerContractId +
-        ' | SheetRow=' +
-        update.rowNumber +
-        ' | LegStatus=' +
-        update.legStatus +
-        ' | ExitType=' +
-        update.exitType +
-        ' | ExitPrice=' +
-        update.exitPrice +
-        ' | ExitDateTime=' +
-        update.exitDateTime +
-        ' | RealizedPnL=' +
-        update.realizedPnL +
-        ' | Commission=' +
-        update.commission
-      );
-    });
+    skipped:
+      writeResult.skipped,
 
-    Logger.log(
-      'Leg exit sync completed.' +
-      ' Updated=' +
-      writeResult.updated +
-      ', Skipped=' +
-      writeResult.skipped +
-      ', WritesPerformed=' +
-      writeResult.writesPerformed
-    );
+    writesPerformed:
+      writeResult.writesPerformed,
 
-    return {
-      proposedUpdates: updates.length,
-      updated: writeResult.updated,
-      skipped: writeResult.skipped,
-      writesPerformed:
-        writeResult.writesPerformed,
-      updates: updates
-    };
-  },
+    updates:
+      updates
+  };
+},
 
   /**
    * Writes a value only when the requested column exists.

@@ -508,7 +508,7 @@ const TOS_EXIT_SYNCHRONIZER = {
    *
    * @return {Object} Normalized integration data.
    */
-  loadDataFromSheets_() {
+  loadDataFromSheets_(snapshot) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
     const masterSheet = ss.getSheetByName(
@@ -533,16 +533,14 @@ const TOS_EXIT_SYNCHRONIZER = {
       );
     }
 
-    const xml = TOS_IBKR_FLEX.getLastXml();
+if (!snapshot) {
+  throw new Error(
+    'Broker snapshot is required.'
+  );
+}
 
-    if (!xml) {
-      throw new Error(
-        'No cached IBKR XML found. Run testIBKRFlexConnection successfully first.'
-      );
-    }
-
-    const parsed =
-      TOS_IBKR_FLEX_PARSER.parse(xml);
+const trades =
+  snapshot.trades || [];
 
     const masterTable = this.getTable_(
       masterSheet,
@@ -579,7 +577,7 @@ const TOS_EXIT_SYNCHRONIZER = {
           legsTable
         ),
 
-      trades: parsed.trades || []
+      trades: trades
     };
   },
 

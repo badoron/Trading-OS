@@ -173,39 +173,73 @@ const TOS_TRADE_GROUPER = {
     );
   },
 
-  testFromCachedXml() {
-    const xml = TOS_IBKR_FLEX.getLastXml();
+testFromCachedXml() {
+  const snapshot =
+    TOS_BROKER_SNAPSHOT_SERVICE.load();
 
-    if (!xml) {
-      throw new Error('No cached IBKR XML found.');
-    }
+  return this.testFromSnapshot_(
+    snapshot
+  );
+},
 
-    const parsed = TOS_IBKR_FLEX_PARSER.parse(xml);
-    const trades = parsed.trades || [];
+testFromSnapshot_(snapshot) {
+  if (!snapshot) {
+    throw new Error(
+      'Broker snapshot is required.'
+    );
+  }
 
-    this.logDiagnostics_(trades);
+  const trades =
+    snapshot.trades || [];
 
-    const groups = this.groupDdcOpenBatches(trades);
+  this.logDiagnostics_(trades);
 
-    Logger.log('DDC open groups: ' + groups.length);
+  const groups =
+    this.groupDdcOpenBatches(
+      trades
+    );
 
-    groups.forEach((group, index) => {
+  Logger.log(
+    'DDC open groups: ' +
+    groups.length
+  );
+
+  groups.forEach(
+    (group, index) => {
       Logger.log(
-        'DDC Group #' + (index + 1) +
-        ' | ' + group.symbol +
-        ' | Expiries: ' + group.expirationSummary +
-        ' | Legs: ' + group.legCount +
-        ' | Net: ' + group.netCreditDebit +
-        ' | Warning: ' + group.riskWarning +
-        ' | Reason: ' + group.recommendationReason
+        'DDC Group #' +
+        (index + 1) +
+        ' | ' +
+        group.symbol +
+        ' | Expiries: ' +
+        group.expirationSummary +
+        ' | Legs: ' +
+        group.legCount +
+        ' | Net: ' +
+        group.netCreditDebit +
+        ' | Warning: ' +
+        group.riskWarning +
+        ' | Reason: ' +
+        group.recommendationReason
       );
 
-      Logger.log(JSON.stringify(group.legs, null, 2));
-    });
+      Logger.log(
+        JSON.stringify(
+          group.legs,
+          null,
+          2
+        )
+      );
+    }
+  );
 
-    return groups;
-  }
+  return groups;
+}
 };
+
+function testTradeGrouper() {
+  return TOS_TRADE_GROUPER.testFromCachedXml();
+}
 
 function testTradeGrouper() {
   return TOS_TRADE_GROUPER.testFromCachedXml();

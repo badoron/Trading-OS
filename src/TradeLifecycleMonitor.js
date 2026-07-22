@@ -28,9 +28,33 @@ const TOS_TRADE_LIFECYCLE_MONITOR = {
    *
    * @return {Object} Lifecycle synchronization summary.
    */
-  syncLifecycleFromOpenPositions() {
-    const ss =
-      SpreadsheetApp.getActiveSpreadsheet();
+syncLifecycleFromOpenPositions() {
+  const snapshot =
+    TOS_BROKER_SNAPSHOT_SERVICE.load();
+
+  return this.syncLifecycleFromSnapshot_(
+    snapshot
+  );
+},
+
+/**
+ * Synchronizes MASTER_TRADES lifecycle using a supplied
+ * normalized broker snapshot.
+ *
+ * This method does not load or parse IBKR XML.
+ *
+ * @param {Object} snapshot Normalized broker snapshot.
+ * @return {Object} Lifecycle synchronization summary.
+ */
+syncLifecycleFromSnapshot_(snapshot) {
+  if (!snapshot) {
+    throw new Error(
+      'Broker snapshot is required.'
+    );
+  }
+
+  const ss =
+    SpreadsheetApp.getActiveSpreadsheet();
 
     const masterSheet =
       ss.getSheetByName(
@@ -56,21 +80,8 @@ const TOS_TRADE_LIFECYCLE_MONITOR = {
       );
     }
 
-    const xml =
-      TOS_IBKR_FLEX.getLastXml();
-
-    if (!xml) {
-      throw new Error(
-        'No cached IBKR XML found. ' +
-        'Run testIBKRFlexConnection successfully first.'
-      );
-    }
-
-    const parsed =
-      TOS_IBKR_FLEX_PARSER.parse(xml);
-
-    const openPositions =
-      parsed.openPositions || [];
+const openPositions =
+  snapshot.openPositions || [];
 
     const openConids =
       this.buildOpenConidMap_(

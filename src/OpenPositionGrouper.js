@@ -4,39 +4,87 @@
  */
 
 const TOS_OPEN_POSITION_GROUPER = {
-  detectActiveDdcFromCachedXml() {
-    const xml = TOS_IBKR_FLEX.getLastXml();
-    if (!xml) throw new Error('No cached IBKR XML found.');
+detectActiveDdcFromCachedXml() {
+  const snapshot =
+    TOS_BROKER_SNAPSHOT_SERVICE.load();
 
-    const parsed = TOS_IBKR_FLEX_PARSER.parse(xml);
-    const positions = (parsed.openPositions || []).filter(p => p.assetCategory === 'OPT');
+  return this.detectActiveDdcFromSnapshot_(
+    snapshot
+  );
+},
 
-    Logger.log('Open option positions: ' + positions.length);
+detectActiveDdcFromSnapshot_(snapshot) {
+  if (!snapshot) {
+    throw new Error(
+      'Broker snapshot is required.'
+    );
+  }
 
-    const bySymbol = this.groupBy_(positions, p => p.underlyingSymbol || p.symbol || '');
-    const ddcGroups = [];
+  const positions =
+    (snapshot.openPositions || [])
+      .filter(
+        position =>
+          position.assetCategory ===
+          'OPT'
+      );
 
-    Object.keys(bySymbol).forEach(symbol => {
-      ddcGroups.push.apply(ddcGroups, this.detectDdcForSymbol_(symbol, bySymbol[symbol]));
-    });
+  Logger.log(
+    'Open option positions: ' +
+    positions.length
+  );
 
-    Logger.log('Active DDC groups found: ' + ddcGroups.length);
+  const bySymbol =
+    this.groupBy_(
+      positions,
+      position =>
+        position.underlyingSymbol ||
+        position.symbol ||
+        ''
+    );
 
-    ddcGroups.forEach((g, i) => {
-      Logger.log(
-        'DDC #' + (i + 1) +
-        ' | ID=' + g.groupId +
-        ' | Symbol=' + g.symbol +
-        ' | ShortExp=' + g.shortExpiry +
-        ' | LongExp=' + g.longExpiry +
-        ' | Legs=' + g.legs.length +
-        ' | CostBasis=' + g.netCostBasis +
-        ' | MarketValue=' + g.marketValue
+  const ddcGroups = [];
+
+  Object.keys(bySymbol)
+    .forEach(symbol => {
+      ddcGroups.push.apply(
+        ddcGroups,
+        this.detectDdcForSymbol_(
+          symbol,
+          bySymbol[symbol]
+        )
       );
     });
 
-    return ddcGroups;
-  },
+  Logger.log(
+    'Active DDC groups found: ' +
+    ddcGroups.length
+  );
+
+  ddcGroups.forEach(
+    (group, index) => {
+      Logger.log(
+        'DDC #' +
+        (index + 1) +
+        ' | ID=' +
+        group.groupId +
+        ' | Symbol=' +
+        group.symbol +
+        ' | ShortExp=' +
+        group.shortExpiry +
+        ' | LongExp=' +
+        group.longExpiry +
+        ' | Legs=' +
+        group.legs.length +
+        ' | CostBasis=' +
+        group.netCostBasis +
+        ' | MarketValue=' +
+        group.marketValue
+      );
+    }
+  );
+
+  return ddcGroups;
+},
 
   detectDdcForSymbol_(symbol, positions) {
     const byExpiry = this.groupBy_(positions, p => p.expiry || '');

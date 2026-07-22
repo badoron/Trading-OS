@@ -4,7 +4,7 @@
  * Official production runner for the DDC lifecycle.
  *
  * Order:
- * 0. Validate cached IBKR snapshot
+ * 0. Validate supplied IBKR broker snapshot
  * 1. Update open legs from IBKR Open Positions
  * 2. Update trade lifecycle
  * 3. Synchronize closed legs from IBKR Trades
@@ -12,7 +12,7 @@
  *
  * V1 scope:
  * - DDC only
- * - Uses cached IBKR Flex XML
+ * - Uses a normalized BrokerSnapshot
  * - Prevents concurrent executions
  * - Stops before lifecycle writes when the snapshot is unsafe
  * - Writes a standardized audit trail to SYNC_LOG
@@ -31,16 +31,41 @@ const TOS_DDC_PIPELINE = {
   },
 
   /**
-   * Runs the full DDC lifecycle pipeline.
+   * Backward-compatible production entry point.
+   *
+   * Loads the latest broker snapshot and delegates
+   * execution to the snapshot-aware pipeline.
    *
    * @return {Object} Pipeline execution result.
    */
   run() {
-    const lock = LockService.getScriptLock();
+    const snapshot =
+      TOS_BROKER_SNAPSHOT_SERVICE.load();
 
-    const lockAcquired = lock.tryLock(
-      this.LOCK_WAIT_MS
+    return this.runWithSnapshot_(
+      snapshot
     );
+  },
+
+  /**
+   * Executes the full DDC lifecycle pipeline using
+   * a supplied normalized broker snapshot.
+   *
+   * At this stage the supplied snapshot is consumed
+   * by the safety validation. The remaining lifecycle
+   * modules continue using their existing production APIs.
+   *
+   * @param {Object} snapshot Normalized broker snapshot.
+   * @return {Object} Pipeline execution result.
+   */
+  runWithSnapshot_(snapshot) {
+    const lock =
+      LockService.getScriptLock();
+
+    const lockAcquired =
+      lock.tryLock(
+        this.LOCK_WAIT_MS
+      );
 
     if (!lockAcquired) {
       throw new Error(
@@ -49,12 +74,14 @@ const TOS_DDC_PIPELINE = {
       );
     }
 
-    const startedAt = new Date();
+    const startedAt =
+      new Date();
 
     const runId =
-      TOS_PIPELINE_AUDIT_LOGGER.createRunId_(
-        startedAt
-      );
+      TOS_PIPELINE_AUDIT_LOGGER
+        .createRunId_(
+          startedAt
+        );
 
     const result = {
       runId: runId,
@@ -79,8 +106,13 @@ const TOS_DDC_PIPELINE = {
       '========================================'
     );
 
-    Logger.log('TRADING OS DDC PIPELINE');
-    Logger.log('RunID=' + runId);
+    Logger.log(
+      'TRADING OS DDC PIPELINE'
+    );
+
+    Logger.log(
+      'RunID=' + runId
+    );
 
     Logger.log(
       '========================================'
@@ -91,45 +123,53 @@ const TOS_DDC_PIPELINE = {
       runId: runId,
       module: this.MODULES.PIPELINE,
       status: 'STARTED',
-      message: 'DDC production pipeline started.',
+      message:
+        'DDC production pipeline started.',
       durationMs: 0
     });
 
     try {
       /*
-       * STEP 0 — Safety validation
+       * STEP 0 - Safety validation
        */
-      currentModule = this.MODULES.SAFETY;
+      currentModule =
+        this.MODULES.SAFETY;
 
       Logger.log(
         'STEP 0/4 - Validate IBKR snapshot'
       );
 
-      result.safety = this.runAuditedStep_(
-        runId,
-        currentModule,
-        function () {
-          return TOS_DDC_PIPELINE
-            .validateSnapshotBeforeWrites_();
-        },
-        function (stepResult) {
-          return (
-            'ActiveTrades=' +
-            stepResult.activeTrades +
-            ', OpenPositions=' +
-            stepResult.openPositions +
-            ', SafeToContinue=' +
-            stepResult.safeToContinue +
-            (
-              stepResult.reason
-                ? ', Reason=' + stepResult.reason
-                : ''
-            )
-          );
-        }
-      );
+      result.safety =
+        this.runAuditedStep_(
+          runId,
+          currentModule,
+          function () {
+            return TOS_DDC_PIPELINE
+              .validateSnapshotBeforeWrites_(
+                snapshot
+              );
+          },
+          function (stepResult) {
+            return (
+              'ActiveTrades=' +
+              stepResult.activeTrades +
+              ', OpenPositions=' +
+              stepResult.openPositions +
+              ', SafeToContinue=' +
+              stepResult.safeToContinue +
+              (
+                stepResult.reason
+                  ? ', Reason=' +
+                    stepResult.reason
+                  : ''
+              )
+            );
+          }
+        );
 
-      if (!result.safety.safeToContinue) {
+      if (
+        !result.safety.safeToContinue
+      ) {
         throw new Error(
           'Pipeline safety check failed: ' +
           result.safety.reason +
@@ -141,10 +181,12 @@ const TOS_DDC_PIPELINE = {
         );
       }
 
-      completedModules.push(currentModule);
+      completedModules.push(
+        currentModule
+      );
 
       /*
-       * STEP 1 — Trade Monitor
+       * STEP 1 - Trade Monitor
        */
       currentModule =
         this.MODULES.TRADE_MONITOR;
@@ -159,18 +201,22 @@ const TOS_DDC_PIPELINE = {
           currentModule,
           function () {
             return TOS_TRADE_MONITOR
-              .updateOpenLegsFromIBKR();
+              .updateOpenLegsFromSnapshot_(snapshot);
           },
           function (stepResult) {
             return TOS_PIPELINE_AUDIT_LOGGER
-              .formatDetails_(stepResult);
+              .formatDetails_(
+                stepResult
+              );
           }
         );
 
-      completedModules.push(currentModule);
+      completedModules.push(
+        currentModule
+      );
 
       /*
-       * STEP 2 — Lifecycle
+       * STEP 2 - Lifecycle
        */
       currentModule =
         this.MODULES.LIFECYCLE;
@@ -185,18 +231,22 @@ const TOS_DDC_PIPELINE = {
           currentModule,
           function () {
             return TOS_TRADE_LIFECYCLE_MONITOR
-              .syncLifecycleFromOpenPositions();
+              .syncLifecycleFromSnapshot_(snapshot);
           },
           function (stepResult) {
             return TOS_PIPELINE_AUDIT_LOGGER
-              .formatDetails_(stepResult);
+              .formatDetails_(
+                stepResult
+              );
           }
         );
 
-      completedModules.push(currentModule);
+      completedModules.push(
+        currentModule
+      );
 
       /*
-       * STEP 3 — Closed-leg synchronization
+       * STEP 3 - Closed-leg synchronization
        */
       currentModule =
         this.MODULES.LEG_EXIT_SYNC;
@@ -215,14 +265,18 @@ const TOS_DDC_PIPELINE = {
           },
           function (stepResult) {
             return TOS_PIPELINE_AUDIT_LOGGER
-              .formatDetails_(stepResult);
+              .formatDetails_(
+                stepResult
+              );
           }
         );
 
-      completedModules.push(currentModule);
+      completedModules.push(
+        currentModule
+      );
 
       /*
-       * STEP 4 — Final trade closure
+       * STEP 4 - Final trade closure
        */
       currentModule =
         this.MODULES.TRADE_FINALIZER;
@@ -241,13 +295,18 @@ const TOS_DDC_PIPELINE = {
           },
           function (stepResult) {
             return TOS_PIPELINE_AUDIT_LOGGER
-              .formatDetails_(stepResult);
+              .formatDetails_(
+                stepResult
+              );
           }
         );
 
-      completedModules.push(currentModule);
+      completedModules.push(
+        currentModule
+      );
 
-      result.completedAt = new Date();
+      result.completedAt =
+        new Date();
 
       result.durationMs =
         result.completedAt.getTime() -
@@ -274,7 +333,8 @@ const TOS_DDC_PIPELINE = {
       );
 
       Logger.log(
-        'RunID=' + result.runId
+        'RunID=' +
+        result.runId
       );
 
       Logger.log(
@@ -290,7 +350,8 @@ const TOS_DDC_PIPELINE = {
         ', PartialExit=' +
         result.lifecycle.partialExit +
         ', ClosedPendingExitSync=' +
-        result.lifecycle.closedPendingExitSync +
+        result.lifecycle
+          .closedPendingExitSync +
         ', Skipped=' +
         result.lifecycle.skipped
       );
@@ -306,11 +367,13 @@ const TOS_DDC_PIPELINE = {
         'Finalizer Updated=' +
         result.tradeFinalizer.updated +
         ', ReadyToClose=' +
-        result.tradeFinalizer.readyToClose
+        result.tradeFinalizer
+          .readyToClose
       );
 
       Logger.log(
-        'DurationMs=' + result.durationMs
+        'DurationMs=' +
+        result.durationMs
       );
 
       Logger.log(
@@ -319,7 +382,8 @@ const TOS_DDC_PIPELINE = {
 
       return result;
     } catch (error) {
-      result.completedAt = new Date();
+      result.completedAt =
+        new Date();
 
       result.durationMs =
         result.completedAt.getTime() -
@@ -356,15 +420,18 @@ const TOS_DDC_PIPELINE = {
       );
 
       Logger.log(
-        'RunID=' + result.runId
+        'RunID=' +
+        result.runId
       );
 
       Logger.log(
-        'FailedModule=' + currentModule
+        'FailedModule=' +
+        currentModule
       );
 
       Logger.log(
-        'DurationMs=' + result.durationMs
+        'DurationMs=' +
+        result.durationMs
       );
 
       Logger.log(
@@ -378,7 +445,8 @@ const TOS_DDC_PIPELINE = {
   },
 
   /**
-   * Executes one pipeline step with STARTED, SUCCESS and FAILED audit rows.
+   * Executes one pipeline step with STARTED,
+   * SUCCESS and FAILED audit rows.
    *
    * @param {string} runId Pipeline RunID.
    * @param {string} moduleName Module name.
@@ -392,29 +460,37 @@ const TOS_DDC_PIPELINE = {
     callback,
     detailFormatter
   ) {
-    const startedAt = new Date();
+    const startedAt =
+      new Date();
 
     this.safeAudit_({
       timestamp: startedAt,
       runId: runId,
       module: moduleName,
       status: 'STARTED',
-      message: moduleName + ' started.',
+      message:
+        moduleName +
+        ' started.',
       durationMs: 0
     });
 
     try {
-      const stepResult = callback();
+      const stepResult =
+        callback();
 
-      const completedAt = new Date();
+      const completedAt =
+        new Date();
 
       const durationMs =
         completedAt.getTime() -
         startedAt.getTime();
 
       const message =
-        typeof detailFormatter === 'function'
-          ? detailFormatter(stepResult)
+        typeof detailFormatter ===
+        'function'
+          ? detailFormatter(
+              stepResult
+            )
           : '';
 
       this.safeAudit_({
@@ -428,7 +504,8 @@ const TOS_DDC_PIPELINE = {
 
       return stepResult;
     } catch (error) {
-      const completedAt = new Date();
+      const completedAt =
+        new Date();
 
       const durationMs =
         completedAt.getTime() -
@@ -448,14 +525,16 @@ const TOS_DDC_PIPELINE = {
   },
 
   /**
-   * Writes audit records without allowing audit failure
-   * to hide or replace the original pipeline result.
+   * Writes audit records without allowing
+   * audit failure to hide or replace the
+   * original pipeline result.
    *
    * @param {Object} record Audit record.
    */
   safeAudit_(record) {
     try {
-      TOS_PIPELINE_AUDIT_LOGGER.log(record);
+      TOS_PIPELINE_AUDIT_LOGGER
+        .log(record);
     } catch (auditError) {
       Logger.log(
         'Audit log warning: ' +
@@ -465,7 +544,8 @@ const TOS_DDC_PIPELINE = {
   },
 
   /**
-   * Logs remaining modules as SKIPPED after pipeline failure.
+   * Logs remaining modules as SKIPPED
+   * after pipeline failure.
    *
    * @param {string} runId Pipeline RunID.
    * @param {string[]} completedModules Modules already completed.
@@ -485,15 +565,19 @@ const TOS_DDC_PIPELINE = {
     ];
 
     const failedIndex =
-      orderedModules.indexOf(failedModule);
+      orderedModules.indexOf(
+        failedModule
+      );
 
     if (failedIndex < 0) {
       return;
     }
 
     for (
-      let index = failedIndex + 1;
-      index < orderedModules.length;
+      let index =
+        failedIndex + 1;
+      index <
+        orderedModules.length;
       index++
     ) {
       const moduleName =
@@ -520,27 +604,26 @@ const TOS_DDC_PIPELINE = {
   },
 
   /**
-   * Loads the cached IBKR snapshot and verifies it is safe
-   * before any lifecycle module is allowed to write.
+   * Verifies that the supplied normalized broker
+   * snapshot is safe before lifecycle modules
+   * are allowed to write.
    *
+   * This method does not reload or parse IBKR XML.
+   *
+   * @param {Object} snapshot Normalized broker snapshot.
    * @return {Object} Safety validation result.
    */
-  validateSnapshotBeforeWrites_() {
-    const xml =
-      TOS_IBKR_FLEX.getLastXml();
-
-    if (!xml) {
+  validateSnapshotBeforeWrites_(
+    snapshot
+  ) {
+    if (!snapshot) {
       throw new Error(
-        'No cached IBKR XML found. ' +
-        'Run testIBKRFlexConnection successfully first.'
+        'Broker snapshot is required.'
       );
     }
 
-    const parsed =
-      TOS_IBKR_FLEX_PARSER.parse(xml);
-
     const openPositions =
-      parsed.openPositions || [];
+      snapshot.openPositions || [];
 
     const data =
       TOS_EXIT_SYNCHRONIZER
@@ -562,7 +645,8 @@ const TOS_DDC_PIPELINE = {
  * - MASTER_TRADES
  * - SYNC_LOG
  *
- * Uses the latest cached IBKR Flex XML.
+ * Loads the latest cached IBKR Flex XML through
+ * BrokerSnapshotService.
  */
 function runTradingOS() {
   return TOS_DDC_PIPELINE.run();
