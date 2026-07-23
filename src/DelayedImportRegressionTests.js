@@ -331,3 +331,270 @@ function delayedImportAssertEqual_(
     );
   }
 }
+/**
+ * User journey:
+ * Day 1:
+ * - A four-leg DDC trade exists in Trading OS.
+ * - No broker import is performed.
+ *
+ * Day 2:
+ * - All four legs are closed at IBKR.
+ * - One delayed Flex import contains all closing executions.
+ *
+ * Expected:
+ * - Lifecycle first identifies CLOSED_PENDING_EXIT_SYNC.
+ * - All four original legs are synchronized as CLOSED.
+ * - Finalizer marks the trade CLOSED.
+ * - Realized PnL, commission and final exit time are reconstructed.
+ */
+function testDelayedImportFullExitRegressionUnitTests() {
+  const tradeId =
+    'TRD-DELAYED-FULL-EXIT';
+
+  const masterTrade = {
+    tradeId: tradeId,
+    strategyId: 'DDC',
+    workflowStatus: 'OPEN'
+  };
+
+  const legs = [
+    {
+      rowNumber: 201,
+      tradeId: tradeId,
+      brokerContractId: 'FULL-201',
+      longShort: 'SHORT',
+      quantity: '-1',
+      legStatus: 'OPEN'
+    },
+    {
+      rowNumber: 202,
+      tradeId: tradeId,
+      brokerContractId: 'FULL-202',
+      longShort: 'LONG',
+      quantity: '1',
+      legStatus: 'OPEN'
+    },
+    {
+      rowNumber: 203,
+      tradeId: tradeId,
+      brokerContractId: 'FULL-203',
+      longShort: 'SHORT',
+      quantity: '-1',
+      legStatus: 'OPEN'
+    },
+    {
+      rowNumber: 204,
+      tradeId: tradeId,
+      brokerContractId: 'FULL-204',
+      longShort: 'LONG',
+      quantity: '1',
+      legStatus: 'OPEN'
+    }
+  ];
+
+  /*
+   * No original leg remains open when the delayed
+   * import is finally performed.
+   */
+  const openPositions = [];
+
+  const executions = [
+    {
+      conid: 'FULL-201',
+      buySell: 'BUY',
+      quantity: '1',
+      openCloseIndicator: 'C',
+      transactionType: 'ExchTrade',
+      tradePrice: '0.20',
+      netCash: '-21.50',
+      ibCommission: '-1.50',
+      fifoPnlRealized: '40',
+      notes: '',
+      dateTime: '20260724;101000'
+    },
+    {
+      conid: 'FULL-202',
+      buySell: 'SELL',
+      quantity: '1',
+      openCloseIndicator: 'C',
+      transactionType: 'ExchTrade',
+      tradePrice: '0.05',
+      netCash: '3.50',
+      ibCommission: '-1.50',
+      fifoPnlRealized: '-10',
+      notes: '',
+      dateTime: '20260724;101000'
+    },
+    {
+      conid: 'FULL-203',
+      buySell: 'BUY',
+      quantity: '1',
+      openCloseIndicator: 'C',
+      transactionType: 'ExchTrade',
+      tradePrice: '0.30',
+      netCash: '-31.50',
+      ibCommission: '-1.50',
+      fifoPnlRealized: '25',
+      notes: '',
+      dateTime: '20260724;103000'
+    },
+    {
+      conid: 'FULL-204',
+      buySell: 'SELL',
+      quantity: '1',
+      openCloseIndicator: 'C',
+      transactionType: 'ExchTrade',
+      tradePrice: '0.10',
+      netCash: '8.50',
+      ibCommission: '-1.50',
+      fifoPnlRealized: '-15',
+      notes: '',
+      dateTime: '20260724;103000'
+    }
+  ];
+
+  /*
+   * STEP 1:
+   * Lifecycle recognizes that no original
+   * contracts remain in IBKR open positions.
+   */
+  const openConidMap =
+    TOS_TRADE_LIFECYCLE_MONITOR
+      .buildOpenConidMap_(
+        openPositions
+      );
+
+  const lifecycle =
+    TOS_TRADE_LIFECYCLE_MONITOR
+      .evaluateLifecycle_(
+        legs,
+        openConidMap
+      );
+
+  delayedImportAssertEqual_(
+    'CLOSED_PENDING_EXIT_SYNC',
+    lifecycle.status,
+    'lifecycle status before exit sync'
+  );
+
+  delayedImportAssertEqual_(
+    0,
+    lifecycle.openLegs,
+    'lifecycle open legs'
+  );
+
+  delayedImportAssertEqual_(
+    4,
+    lifecycle.closedLegs,
+    'lifecycle closed legs'
+  );
+
+  masterTrade.workflowStatus =
+    lifecycle.status;
+
+  /*
+   * STEP 2:
+   * Match all four closing executions to the
+   * original trade legs.
+   */
+  const legsByTradeId = {};
+
+  legsByTradeId[tradeId] =
+    legs;
+
+  const exitUpdates =
+    TOS_EXIT_SYNCHRONIZER
+      .buildLegExitPreview_(
+        [masterTrade],
+        legsByTradeId,
+        executions
+      );
+
+  delayedImportAssertEqual_(
+    4,
+    exitUpdates.length,
+    'exit update count'
+  );
+
+  delayedImportApplyExitUpdates_(
+    legs,
+    exitUpdates
+  );
+
+  const openLegs =
+    legs.filter(function (leg) {
+      return leg.legStatus === 'OPEN';
+    });
+
+  const closedLegs =
+    legs.filter(function (leg) {
+      return leg.legStatus === 'CLOSED';
+    });
+
+  delayedImportAssertEqual_(
+    0,
+    openLegs.length,
+    'final open leg count'
+  );
+
+  delayedImportAssertEqual_(
+    4,
+    closedLegs.length,
+    'final closed leg count'
+  );
+
+  /*
+   * STEP 3:
+   * Finalizer reconstructs the completed trade.
+   *
+   * PnL:
+   * 40 - 10 + 25 - 15 = 40
+   *
+   * Commission:
+   * -1.50 * 4 = -6
+   */
+  const finalization =
+    TOS_TRADE_FINALIZER
+      .summarizeTrade_(
+        legs
+      );
+
+  delayedImportAssertEqual_(
+    true,
+    finalization.readyToClose,
+    'readyToClose'
+  );
+
+  delayedImportAssertEqual_(
+    'CLOSED',
+    finalization.workflowStatus,
+    'final workflow status'
+  );
+
+  delayedImportAssertEqual_(
+    40,
+    finalization.realizedPnL,
+    'final realized PnL'
+  );
+
+  delayedImportAssertEqual_(
+    -6,
+    finalization.commission,
+    'final commission'
+  );
+
+  delayedImportAssertEqual_(
+    '20260724;103000',
+    finalization.exitDateTime,
+    'final exit date and time'
+  );
+
+  Logger.log(
+    'Delayed full-exit import regression completed. Passed=1'
+  );
+
+  return {
+    passed: 1,
+    failed: 0
+  };
+}
