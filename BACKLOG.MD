@@ -10,93 +10,11 @@ Completed items are removed from the active backlog and documented in CHANGELOG.
 
 # Sprint 2 — Trade Lifecycle
 
-Status: NEXT
+Status: IN PROGRESS
 
 ## High Priority
 
-### TOS-201
 
-Closed Trade Detection
-
-Status
-
-TODO
-
-Description
-
-Detect when an imported strategy no longer exists in IBKR Open Positions.
-
-Expected Result
-
-- WorkflowStatus = CLOSED
-- ExitDate populated
-- Monitoring stops
-- Trade remains in history
-
----
-
-### TOS-202
-
-Exit Synchronization
-
-Status
-
-TODO
-
-Description
-
-Synchronize closed trades using IBKR executions.
-
-Expected Result
-
-- Exit Price
-- Exit Date
-- Broker Commission
-- Realized PnL
-
----
-
-### TOS-203
-
-Workflow State Engine
-
-Status
-
-TODO
-
-Description
-
-Automatic transitions between
-
-DETECTED
-
-↓
-
-APPROVED
-
-↓
-
-IMPORTED
-
-↓
-
-OPEN
-
-↓
-
-PARTIAL_EXIT
-
-↓
-
-CLOSED
-
-↓
-
-ARCHIVED
-
----
-
-### TOS-204
 
 Partial Exit Detection
 
@@ -277,3 +195,14 @@ Sprint 1 MVP
 - Trade Monitor
 - Live Synchronization
 - Duplicate Protection
+
+## Sprint 2
+
+- Closed Trade Detection
+- Exit Synchronization
+- Workflow State Engine
+- Partial Exit Detection
+- Trade Lifecycle Monitor
+- Trade Finalizer
+- Delayed Import Recovery
+- Delayed Import Regression Coverage (43 automated regression suites)

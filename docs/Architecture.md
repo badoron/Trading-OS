@@ -151,6 +151,23 @@ Historical executions will later be used only for:
 - Historical analytics
 - Performance reporting
 
+### Delayed Import Recovery
+
+Trading OS is resilient to missed broker imports.
+
+Open Positions remain the source of truth for determining which contracts are currently active.
+
+Historical executions are used to reconstruct completed lifecycle events that were not synchronized earlier, including:
+
+- Partial exits
+- Full trade exits
+- Realized P/L
+- Commissions
+- Final exit timestamps
+
+As long as the required executions remain available within the configured IBKR Flex Query lookback window, Trading OS reconstructs the correct trade state from a later import.
+
+This behavior is fully protected by automated regression tests covering delayed imports, missed imports and full lifecycle replay.
 ---
 
 ## 2. Strategy-first Architecture

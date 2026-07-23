@@ -1,6 +1,6 @@
 # Trading OS — SESSION STATE
 
-Last Updated: 2026-07-10
+Last Updated: 2026-07-23
 
 ---
 
@@ -12,188 +12,84 @@ Last Updated: 2026-07-10
 
 # Current Sprint
 
-Sprint 1 — MVP Completion
+Trade Lifecycle Stabilization
 
 Status:
 
-STABLE
+IN PROGRESS
 
 ---
 
 # Completed
 
-## Infrastructure
-
-- GitHub Repository
-- VS Code Workspace
-- clasp Integration
-- Google Apps Script
-- Logger
-- Health Framework
-- Configuration
-- XML Cache
-
----
-
-## IBKR Integration
+## Core Pipeline
 
 - IBKR Flex Client
-- Flex XML Download
+- XML Cache
 - XML Parser
-- Open Positions Parser
-- Execution Parser
-
----
-
-## Strategy Engine
-
-- Strategy Engine Foundation
+- Open Position Parser
+- Trade Parser
+- Strategy Engine
 - DDC Detector
-- Stable StrategyID generation
-- Stable LegID generation
-
----
-
-## Workflow
-
-- IMPORT_REVIEW Writer
+- IMPORT_REVIEW
 - Manual Approval Workflow
-- Duplicate Detection
-- MASTER_TRADES Import
-- TRADE_LEGS Import
+- MASTER_TRADES
+- TRADE_LEGS
 
----
+## Trade Lifecycle
 
-## Monitoring
+- Trade Lifecycle Monitor
+- Exit Synchronizer
+- Trade Finalizer
+- Delayed Import Recovery
 
-- Trade Monitor
-- Live Position Synchronization
-- Market Value Update
-- Unrealized PnL Update
+## Quality
+
+- Health Check passing
+- Automated Regression: 43 / 43 passing
+- Delayed Import user journey regression coverage
 
 ---
 
 # Current Work
 
-System stabilization.
-
-Improving synchronization between:
-
-- IBKR
-- IMPORT_REVIEW
-- MASTER_TRADES
-- TRADE_LEGS
-
-Documentation has been updated to reflect the new Strategy Engine architecture.
+MVP stabilization and continued expansion of supported strategies.
 
 ---
 
-# Next Sprint
+# Next Major Development
 
-Trade Lifecycle Management
-
-Modules:
-
-- Closed Trade Detection
-- Exit Synchronization
-- Workflow State Automation
-- Realized PnL
-- Partial Exit Support
+- OTV Detector
+- PMCC Detector
+- Butterfly Detector
+- TimeEdge Detector
 
 ---
 
-# Open Questions
+# Recent Achievements
 
-- Best method for detecting closed strategies
-- Exit workflow architecture
-- Handling rolling strategies
-- Partial close implementation
-- Assignment handling
-
----
-
-# Recent Decisions
-
-- Open Positions are the Source of Truth for active trades.
-- Historical Executions are not used to reconstruct active positions.
-- Every strategy owns its own detector.
-- Strategy Engine executes all detectors.
-- IMPORT_REVIEW is mandatory before production import.
-- Manual approval is always required.
-- Stable StrategyID and LegID are mandatory.
-- Trade Monitor updates only active trades.
-- The architecture must support unlimited future strategies.
+- Delayed Import Recovery fully implemented
+- Historical execution replay validated
+- Full lifecycle replay validated
+- Regression expanded from 39 to 43 automated suites
+- Architecture and project documentation synchronized
 
 ---
 
 # Known Issues
 
-IBKR Flex API occasionally returns:
-
-```
-Error 1001
-Statement could not be generated at this time.
-```
-
-This is an IBKR-side issue.
-
-The retry mechanism is working correctly.
+None currently blocking development.
 
 ---
 
 # Technical Debt
 
-Future improvements:
-
-- Repository Layer
-- Configuration Repository
-- Strategy Plugin Registration
-- Generic Strategy Detector Interface
-- Automatic Health Tests
-- Unit Tests
-- Integration Tests
+- Repository abstraction
+- Reduce remaining hardcoded column mappings
+- Continue modularization of source tree
 
 ---
 
-# Next Immediate Task
+# Next Task
 
-Implement Closed Trade Detection.
-
-After that:
-
-1. Exit Synchronization
-2. Workflow State Automation
-3. Realized PnL
-4. OTV Detector
-5. PMCC Detector
-6. Butterfly Detector
-
----
-
-# Current MVP Status
-
-✅ IBKR Connection
-
-✅ XML Cache
-
-✅ XML Parser
-
-✅ Open Position Parser
-
-✅ DDC Detector
-
-✅ IMPORT_REVIEW
-
-✅ Manual Approval
-
-✅ MASTER_TRADES
-
-✅ TRADE_LEGS
-
-✅ Trade Monitor
-
-✅ Live Synchronization
-
-✅ Duplicate Protection
-
-System is stable and ready to continue with Trade Lifecycle development.
+Continue with the first prioritized backlog item.
