@@ -598,3 +598,225 @@ function testDelayedImportFullExitRegressionUnitTests() {
     failed: 0
   };
 }
+/**
+ * User journey:
+ * Day 1:
+ * - A four-leg DDC trade exists in Trading OS.
+ *
+ * Days 2-4:
+ * - No Flex imports are performed.
+ *
+ * Day 5:
+ * - Two legs are closed at IBKR.
+ *
+ * Days 6-7:
+ * - No Flex imports are performed.
+ *
+ * Day 8:
+ * - One Flex import contains the current open positions
+ *   and the historical closing executions.
+ *
+ * Expected:
+ * - The elapsed days and missed imports do not affect reconstruction.
+ * - Trade becomes PARTIAL_EXIT.
+ * - Two legs remain OPEN.
+ * - Two legs become CLOSED.
+ */
+function testMultipleMissedImportsRegressionUnitTests() {
+  const tradeId =
+    'TRD-MULTIPLE-MISSED-IMPORTS';
+
+  const masterTrade = {
+    tradeId: tradeId,
+    strategyId: 'DDC',
+    workflowStatus: 'OPEN'
+  };
+
+  const legs = [
+    {
+      rowNumber: 301,
+      tradeId: tradeId,
+      brokerContractId: 'MISSED-301',
+      longShort: 'SHORT',
+      quantity: '-1',
+      legStatus: 'OPEN'
+    },
+    {
+      rowNumber: 302,
+      tradeId: tradeId,
+      brokerContractId: 'MISSED-302',
+      longShort: 'LONG',
+      quantity: '1',
+      legStatus: 'OPEN'
+    },
+    {
+      rowNumber: 303,
+      tradeId: tradeId,
+      brokerContractId: 'MISSED-303',
+      longShort: 'SHORT',
+      quantity: '-1',
+      legStatus: 'OPEN'
+    },
+    {
+      rowNumber: 304,
+      tradeId: tradeId,
+      brokerContractId: 'MISSED-304',
+      longShort: 'LONG',
+      quantity: '1',
+      legStatus: 'OPEN'
+    }
+  ];
+
+  /*
+   * Day 8 snapshot:
+   * Only contracts 301 and 302 remain open.
+   */
+  const openPositions = [
+    {
+      conid: 'MISSED-301'
+    },
+    {
+      conid: 'MISSED-302'
+    }
+  ];
+
+  /*
+   * The 14-day Flex window still includes
+   * the Day 5 closing executions.
+   */
+  const executions = [
+    {
+      conid: 'MISSED-303',
+      buySell: 'BUY',
+      quantity: '1',
+      openCloseIndicator: 'C',
+      transactionType: 'ExchTrade',
+      tradePrice: '0.35',
+      netCash: '-36.50',
+      ibCommission: '-1.50',
+      fifoPnlRealized: '32',
+      notes: '',
+      dateTime: '20260720;110000'
+    },
+    {
+      conid: 'MISSED-304',
+      buySell: 'SELL',
+      quantity: '1',
+      openCloseIndicator: 'C',
+      transactionType: 'ExchTrade',
+      tradePrice: '0.08',
+      netCash: '6.50',
+      ibCommission: '-1.50',
+      fifoPnlRealized: '-12',
+      notes: '',
+      dateTime: '20260720;110000'
+    }
+  ];
+
+  const openConidMap =
+    TOS_TRADE_LIFECYCLE_MONITOR
+      .buildOpenConidMap_(
+        openPositions
+      );
+
+  const lifecycle =
+    TOS_TRADE_LIFECYCLE_MONITOR
+      .evaluateLifecycle_(
+        legs,
+        openConidMap
+      );
+
+  delayedImportAssertEqual_(
+    'PARTIAL_EXIT',
+    lifecycle.status,
+    'lifecycle status after missed imports'
+  );
+
+  delayedImportAssertEqual_(
+    2,
+    lifecycle.openLegs,
+    'open legs after missed imports'
+  );
+
+  delayedImportAssertEqual_(
+    2,
+    lifecycle.closedLegs,
+    'closed legs after missed imports'
+  );
+
+  masterTrade.workflowStatus =
+    lifecycle.status;
+
+  const legsByTradeId = {};
+
+  legsByTradeId[tradeId] =
+    legs;
+
+  const exitUpdates =
+    TOS_EXIT_SYNCHRONIZER
+      .buildLegExitPreview_(
+        [masterTrade],
+        legsByTradeId,
+        executions
+      );
+
+  delayedImportAssertEqual_(
+    2,
+    exitUpdates.length,
+    'historical exit update count'
+  );
+
+  delayedImportApplyExitUpdates_(
+    legs,
+    exitUpdates
+  );
+
+  const openLegs =
+    legs.filter(function (leg) {
+      return leg.legStatus === 'OPEN';
+    });
+
+  const closedLegs =
+    legs.filter(function (leg) {
+      return leg.legStatus === 'CLOSED';
+    });
+
+  delayedImportAssertEqual_(
+    2,
+    openLegs.length,
+    'final open leg count'
+  );
+
+  delayedImportAssertEqual_(
+    2,
+    closedLegs.length,
+    'final closed leg count'
+  );
+
+  const finalization =
+    TOS_TRADE_FINALIZER
+      .summarizeTrade_(
+        legs
+      );
+
+  delayedImportAssertEqual_(
+    false,
+    finalization.readyToClose,
+    'readyToClose after missed imports'
+  );
+
+  delayedImportAssertEqual_(
+    'PARTIAL_EXIT',
+    finalization.workflowStatus,
+    'final status after missed imports'
+  );
+
+  Logger.log(
+    'Multiple missed imports regression completed. Passed=1'
+  );
+
+  return {
+    passed: 1,
+    failed: 0
+  };
+}

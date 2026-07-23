@@ -37,6 +37,7 @@ const TOS_REGRESSION_TEST_RUNNER = {
       testTradingOSPipelineSnapshotUnitTests,
       testDelayedImportRegressionUnitTests,
       testDelayedImportFullExitRegressionUnitTests,
+      testMultipleMissedImportsRegressionUnitTests,
 
       // Monitoring and exits
       testExitSynchronizerUnitTests,
