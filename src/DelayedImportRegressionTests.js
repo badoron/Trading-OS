@@ -820,3 +820,296 @@ function testMultipleMissedImportsRegressionUnitTests() {
     failed: 0
   };
 }
+/**
+ * User journey:
+ *
+ * Day 1:
+ * - A four-leg DDC trade opens.
+ *
+ * Day 3:
+ * - Legs 303 and 304 close.
+ *
+ * Day 5:
+ * - Legs 301 and 302 close.
+ *
+ * Day 6:
+ * - The first Flex import contains all four historical
+ *   closing executions.
+ *
+ * Expected replay:
+ * - First historical exit event reconstructs PARTIAL_EXIT.
+ * - Second historical exit event reconstructs CLOSED.
+ * - All legs are CLOSED.
+ * - Final PnL, commission and exit time are correct.
+ */
+function testDelayedImportFullLifecycleReplayRegressionUnitTests() {
+  const tradeId =
+    'TRD-DELAYED-FULL-LIFECYCLE-REPLAY';
+
+  const masterTrade = {
+    tradeId: tradeId,
+    strategyId: 'DDC',
+    workflowStatus: 'OPEN'
+  };
+
+  const legs = [
+    {
+      rowNumber: 401,
+      tradeId: tradeId,
+      brokerContractId: 'REPLAY-401',
+      longShort: 'SHORT',
+      quantity: '-1',
+      legStatus: 'OPEN'
+    },
+    {
+      rowNumber: 402,
+      tradeId: tradeId,
+      brokerContractId: 'REPLAY-402',
+      longShort: 'LONG',
+      quantity: '1',
+      legStatus: 'OPEN'
+    },
+    {
+      rowNumber: 403,
+      tradeId: tradeId,
+      brokerContractId: 'REPLAY-403',
+      longShort: 'SHORT',
+      quantity: '-1',
+      legStatus: 'OPEN'
+    },
+    {
+      rowNumber: 404,
+      tradeId: tradeId,
+      brokerContractId: 'REPLAY-404',
+      longShort: 'LONG',
+      quantity: '1',
+      legStatus: 'OPEN'
+    }
+  ];
+
+  /*
+   * One delayed Flex import contains two separate
+   * historical exit events.
+   */
+  const executions = [
+    {
+      conid: 'REPLAY-403',
+      buySell: 'BUY',
+      quantity: '1',
+      openCloseIndicator: 'C',
+      transactionType: 'ExchTrade',
+      tradePrice: '0.30',
+      netCash: '-31.50',
+      ibCommission: '-1.50',
+      fifoPnlRealized: '30',
+      notes: '',
+      dateTime: '20260720;101500'
+    },
+    {
+      conid: 'REPLAY-404',
+      buySell: 'SELL',
+      quantity: '1',
+      openCloseIndicator: 'C',
+      transactionType: 'ExchTrade',
+      tradePrice: '0.05',
+      netCash: '3.50',
+      ibCommission: '-1.50',
+      fifoPnlRealized: '-10',
+      notes: '',
+      dateTime: '20260720;101500'
+    },
+    {
+      conid: 'REPLAY-401',
+      buySell: 'BUY',
+      quantity: '1',
+      openCloseIndicator: 'C',
+      transactionType: 'ExchTrade',
+      tradePrice: '0.20',
+      netCash: '-21.50',
+      ibCommission: '-1.50',
+      fifoPnlRealized: '45',
+      notes: '',
+      dateTime: '20260722;143000'
+    },
+    {
+      conid: 'REPLAY-402',
+      buySell: 'SELL',
+      quantity: '1',
+      openCloseIndicator: 'C',
+      transactionType: 'ExchTrade',
+      tradePrice: '0.08',
+      netCash: '6.50',
+      ibCommission: '-1.50',
+      fifoPnlRealized: '-15',
+      notes: '',
+      dateTime: '20260722;143000'
+    }
+  ];
+
+  const legsByTradeId = {};
+
+  legsByTradeId[tradeId] =
+    legs;
+
+  /*
+   * REPLAY EVENT 1:
+   * The first two historical executions represent
+   * the earlier partial exit.
+   */
+  const firstExitEvent =
+    executions.slice(0, 2);
+
+  const firstExitUpdates =
+    TOS_EXIT_SYNCHRONIZER
+      .buildLegExitPreview_(
+        [masterTrade],
+        legsByTradeId,
+        firstExitEvent
+      );
+
+  delayedImportAssertEqual_(
+    2,
+    firstExitUpdates.length,
+    'first replay exit update count'
+  );
+
+  delayedImportApplyExitUpdates_(
+    legs,
+    firstExitUpdates
+  );
+
+  const partialFinalization =
+    TOS_TRADE_FINALIZER
+      .summarizeTrade_(
+        legs
+      );
+
+  delayedImportAssertEqual_(
+    false,
+    partialFinalization.readyToClose,
+    'partial replay readyToClose'
+  );
+
+  delayedImportAssertEqual_(
+    'PARTIAL_EXIT',
+    partialFinalization.workflowStatus,
+    'partial replay workflow status'
+  );
+
+  delayedImportAssertEqual_(
+    2,
+    legs.filter(function (leg) {
+      return leg.legStatus === 'OPEN';
+    }).length,
+    'partial replay open leg count'
+  );
+
+  delayedImportAssertEqual_(
+    2,
+    legs.filter(function (leg) {
+      return leg.legStatus === 'CLOSED';
+    }).length,
+    'partial replay closed leg count'
+  );
+
+  masterTrade.workflowStatus =
+    partialFinalization.workflowStatus;
+
+  /*
+   * REPLAY EVENT 2:
+   * The remaining historical executions complete
+   * the trade lifecycle.
+   */
+  const secondExitEvent =
+    executions.slice(2);
+
+  const secondExitUpdates =
+    TOS_EXIT_SYNCHRONIZER
+      .buildLegExitPreview_(
+        [masterTrade],
+        legsByTradeId,
+        secondExitEvent
+      );
+
+  delayedImportAssertEqual_(
+    2,
+    secondExitUpdates.length,
+    'second replay exit update count'
+  );
+
+  delayedImportApplyExitUpdates_(
+    legs,
+    secondExitUpdates
+  );
+
+  const finalization =
+    TOS_TRADE_FINALIZER
+      .summarizeTrade_(
+        legs
+      );
+
+  delayedImportAssertEqual_(
+    true,
+    finalization.readyToClose,
+    'full replay readyToClose'
+  );
+
+  delayedImportAssertEqual_(
+    'CLOSED',
+    finalization.workflowStatus,
+    'full replay workflow status'
+  );
+
+  delayedImportAssertEqual_(
+    0,
+    legs.filter(function (leg) {
+      return leg.legStatus === 'OPEN';
+    }).length,
+    'full replay open leg count'
+  );
+
+  delayedImportAssertEqual_(
+    4,
+    legs.filter(function (leg) {
+      return leg.legStatus === 'CLOSED';
+    }).length,
+    'full replay closed leg count'
+  );
+
+  /*
+   * Realized PnL:
+   * 30 - 10 + 45 - 15 = 50
+   *
+   * Commission:
+   * -1.50 * 4 = -6
+   *
+   * Final exit time:
+   * Latest historical execution.
+   */
+  delayedImportAssertEqual_(
+    50,
+    finalization.realizedPnL,
+    'full replay realized PnL'
+  );
+
+  delayedImportAssertEqual_(
+    -6,
+    finalization.commission,
+    'full replay commission'
+  );
+
+  delayedImportAssertEqual_(
+    '20260722;143000',
+    finalization.exitDateTime,
+    'full replay exit date and time'
+  );
+
+  Logger.log(
+    'Delayed full lifecycle replay regression completed. Passed=1'
+  );
+
+  return {
+    passed: 1,
+    failed: 0
+  };
+}
