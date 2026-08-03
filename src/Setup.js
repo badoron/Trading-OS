@@ -3,22 +3,35 @@
  * Run manually only when configuring secrets.
  */
 
+function setupIBKRFlexConfig(token, queryId) {
+  const normalizedToken = String(token || '').trim();
+  const normalizedQueryId = String(queryId || '').trim();
 
-function setupIBKRFlexConfig() {
-  TOS_CONFIG.set(
-    TOS_CONFIG.KEYS.IBKR_FLEX_TOKEN,
-    'PUT_TOKEN_HERE'
-  );
+  if (!normalizedToken || normalizedToken === 'PUT_TOKEN_HERE') {
+    throw new Error('A valid IBKR Flex token is required.');
+  }
 
-  TOS_CONFIG.set(
-    TOS_CONFIG.KEYS.IBKR_FLEX_QUERY_ID,
-    '1566805'
-  );
+  if (!/^\d+$/.test(normalizedQueryId)) {
+    throw new Error('A numeric IBKR Flex query ID is required.');
+  }
+
+  TOS_CONFIG.set(TOS_CONFIG.KEYS.IBKR_FLEX_TOKEN, normalizedToken);
+  TOS_CONFIG.set(TOS_CONFIG.KEYS.IBKR_FLEX_QUERY_ID, normalizedQueryId);
 
   Logger.log('IBKR Flex configuration saved.');
 }
+
 function debugScriptProperties() {
   const props = PropertiesService.getScriptProperties().getProperties();
+  const redacted = {};
 
-  Logger.log(JSON.stringify(props, null, 2));
+  Object.keys(props).forEach(key => {
+    const value = String(props[key] || '');
+    redacted[key] = value
+      ? '[REDACTED length=' + value.length + ']'
+      : '[EMPTY]';
+  });
+
+  Logger.log(JSON.stringify(redacted, null, 2));
+  return redacted;
 }

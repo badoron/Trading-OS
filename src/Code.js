@@ -4,7 +4,7 @@
  */
 
 const TOS = {
-  VERSION: 'v3.0-core-001',
+  VERSION: 'v3.1.0-rc.2',
 
   SHEETS: {
     HOME: 'HOME',
@@ -23,6 +23,8 @@ const TOS = {
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu(TOS.MENU.NAME)
+    .addItem('🔄 Full Synchronization', 'runFullTradingOSSync')
+    .addSeparator()
     .addItem('🌅 Morning Routine', 'tosMorningRoutine')
     .addSeparator()
     .addItem('➕ New Trade Wizard', 'tosNewTradeWizard')
@@ -31,6 +33,7 @@ function onOpen() {
     .addItem('🎯 Scan Opportunities', 'tosScanOpportunities')
     .addSeparator()
     .addItem('🧹 Health Check', 'tosHealthCheck')
+    .addItem('🚦 Release Preflight', 'tosReleasePreflight')
     .addItem('🌙 End of Day', 'tosEndOfDay')
     .addToUi();
 
@@ -76,6 +79,18 @@ function tosEndOfDay() {
 function tosHealthCheck() {
   tosRunSafe_('Health Check', function () {
     TOS_HEALTH.run();
+  });
+}
+
+
+function tosReleasePreflight() {
+  tosRunSafe_('Release Preflight', function () {
+    const report = runTradingOSReleasePreflight();
+    const message = report.ok
+      ? 'Release preflight passed.'
+      : 'Release preflight failed. Review the execution log.';
+
+    SpreadsheetApp.getUi().alert(message);
   });
 }
 

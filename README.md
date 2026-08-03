@@ -1,128 +1,77 @@
 # Trading OS
 
-Personal Trading Operating System for managing options strategies, IBKR synchronization, trade lifecycle, risk management, analytics and AI-assisted trading workflows.
+Google Apps Script trading workflow for IBKR Flex imports, DDC lifecycle management, residual-position lifecycle, account history, dashboard reporting, and controlled stabilization migrations.
 
----
+## Current capabilities
 
-# New AI Session
+- One-click Full Synchronization from the Trading OS menu
+- IBKR Flex download with bounded retry handling and safe XML caching
+- XML parsing, DDC detection, Import Review, and approval processing
+- DDC trade lifecycle and exit synchronization
+- Residual LONG position detection, persistence, refresh, and automatic closure
+- Account history synchronization
+- Dashboard and HOME refresh
+- Release preflight validation
+- End-to-end regression suite
 
-If you are continuing this project in a new AI session, read the following files **in order**:
+## Current release
 
-1. START_HERE.md
-2. docs/PROJECT_BRAIN.md
-3. docs/SESSION_STATE.md
-4. docs/DECISIONS.md
-5. docs/PROJECT_HANDOVER.md
-6. BACKLOG.md
+`v3.1.0-rc.2`
 
-Then continue from the first unfinished backlog item.
+This release candidate has been validated end-to-end against a live IBKR Flex Statement. The validated flow is:
 
----
-
-# Current Status
-
-## Sprint 1 (MVP) ✅ COMPLETED
-
-Current supported strategy:
-
-- DDC (Double Diagonal Calendar)
-
-Current working pipeline:
-
-```
-IBKR Flex Query
-        │
-        ▼
-IBKR XML Cache
-        │
-        ▼
-IBKR Flex Parser
-        │
-        ▼
-Open Positions
-        │
-        ▼
-DDC Detector
-        │
-        ▼
-IMPORT_REVIEW
-        │
-        ▼
-Manual Approval
-        │
-        ▼
-MASTER_TRADES
-        │
-        ▼
-TRADE_LEGS
-        │
-        ▼
-Trade Monitor
+```text
+Download XML
+→ Parse XML
+→ Detect DDC groups
+→ Process Import Review approvals
+→ Run trade lifecycle pipeline
+→ Synchronize residual positions
+→ Refresh Dashboard
+→ Refresh HOME
 ```
 
----
+Start with:
 
-# MVP Features
+1. `START_HERE.md`
+2. `UPGRADE.md`
+3. `RELEASE_NOTES.md`
+4. `RELEASE_CHECKLIST.md`
 
-Implemented:
+## Full Synchronization
 
-- Download IBKR Flex statements
-- Parse Executions
-- Parse Open Positions
-- Detect active DDC strategies
-- Ignore historical closed executions
-- Import candidates into IMPORT_REVIEW
-- Manual approval workflow
-- Create MASTER_TRADES
-- Create TRADE_LEGS
-- Prevent duplicate imports
-- Live update from IBKR Open Positions
-- Stable Strategy IDs
-- Stable Leg IDs
+From the spreadsheet menu, run:
 
----
+```text
+Trading OS → 🔄 Full Synchronization
+```
 
-# Architecture
+The workflow stops safely if IBKR cannot generate the statement. Error `1001` is retried five times with bounded delays, and the existing cached XML is not overwritten after a failed download.
 
-Technology stack:
+A successful run displays a summary containing XML download, parser status, active DDC groups, pending imports, open trades, updated open legs, residuals closed, Dashboard status, HOME status, and a Run ID.
 
-- Google Sheets → Database, workflow and dashboards
-- Google Apps Script → Business logic and automation
-- GitHub → Source control and documentation
-- IBKR Flex Query → Broker integration
+## Apps Script deployment
 
----
+The clasp root is `src`.
 
-# Current Design Principles
+```bash
+clasp login
+clasp push
+```
 
-- Open Positions are the single source of truth for active trades.
-- Historical executions are used only for trade entry/exit history.
-- Every strategy is detected independently.
-- Every new strategy must pass through IMPORT_REVIEW.
-- MASTER_TRADES contains one row per strategy.
-- TRADE_LEGS contains one row per option leg.
-- Live market updates never create duplicate trades.
+Never commit IBKR credentials. Configure Script Properties through:
 
----
+```javascript
+setupIBKRFlexConfig('YOUR_REAL_TOKEN', 'YOUR_NUMERIC_QUERY_ID');
+```
 
-# Next Sprint
+## Required validation
 
-Sprint 2
+Run in Apps Script against a copied spreadsheet:
 
-- Detect closed trades
-- Update trade status automatically
-- Exit PnL
-- Exit date
-- Stop monitoring closed trades
+```javascript
+testFullTradingOSRegression();
+runTradingOSReleasePreflight();
+```
 
----
-
-# Future Roadmap
-
-Planned strategy support:
-
-- OTV
-- PMCC
-- Butterfly
-- TimeEdge
-- Additional strategy plugins through the Strategy Engine
+Then run Full Synchronization and reconcile `MASTER_TRADES`, `TRADE_LEGS`, `RESIDUAL_POSITIONS`, `DASHBOARD`, and `HOME` before production release.

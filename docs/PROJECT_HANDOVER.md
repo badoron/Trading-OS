@@ -1,515 +1,75 @@
 # Trading OS — PROJECT HANDOVER
 
-Version: 4.0.0
+Version: `v3.1.0-rc.2`
 
-Status: MVP Completed
+Status: Full Synchronization milestone validated
 
 Owner: Doron Ben Ari
 
----
+## Project vision
 
-# 1. Project Vision
+Trading OS is a personal options-trading operating system that manages broker synchronization, strategy detection, review, lifecycle, residual positions, reporting, and future analytics.
 
-Trading OS is a professional personal Trading Operating System built specifically for options trading.
+## Runtime platform
 
-The goal is **not** to create another trading journal.
+- Google Sheets: database and user interface
+- Google Apps Script: orchestration and business logic
+- Git and GitHub: source control
+- VS Code and clasp: development and deployment
+- Interactive Brokers Flex: broker source of truth
 
-The goal is to manage the complete lifecycle of every options strategy.
+## Current primary workflow
 
-```
-Idea
+```text
+Trading OS → Full Synchronization
 
-↓
-
-Scanner
-
-↓
-
-Playbook Validation
-
-↓
-
-Import from IBKR
-
-↓
-
-Import Review
-
-↓
-
-Trade Lifecycle
-
-↓
-
-Risk Management
-
-↓
-
-Performance Analytics
-
-↓
-
-AI Coach
+IBKR Flex Download
+→ XML Parser
+→ DDC Detector
+→ IMPORT_REVIEW update
+→ Import approval processing
+→ TradingOSApplication / DDC pipeline
+→ ResidualPositionManager synchronization
+→ Dashboard refresh
+→ HOME refresh
 ```
 
-Platform
+The orchestrator reuses existing components. Do not duplicate parser, detector, approval, lifecycle, residual, Dashboard, or HOME business logic.
 
-- Google Sheets (Database + UI)
-- Google Apps Script (Business Logic)
-- GitHub (Source Control)
-- VS Code + clasp (Development)
-- Interactive Brokers (Source of Truth)
+## Current capabilities
 
----
+- IBKR Flex download and cached XML
+- Five-attempt bounded retry handling for temporary error `1001`
+- Safe stop without overwriting cached XML after download failure
+- DDC detection and stable identifiers
+- Manual Import Review and approval
+- MASTER_TRADES and TRADE_LEGS lifecycle
+- Exit synchronization and trade finalization
+- Residual LONG classification and persistence
+- Residual refresh and automatic closure
+- Dashboard and HOME refresh
+- Regression runner and release preflight
 
-# 2. Current Architecture
+## Latest production validation
 
-```
-IBKR Flex Query
+A live Full Synchronization completed successfully on 2026-07-31. Three stale residuals were closed and one active residual remained open. Dashboard and HOME refreshed in the same run.
 
-↓
+## Next approved cycle
 
-XML Cache
+Operational hardening:
 
-↓
+- System Health Check
+- Persistent Full Synchronization Audit Log
+- End-to-End Full Synchronization Regression Coverage
 
-XML Parser
+Only after hardening should strategy expansion resume with OTV, PMCC, Butterfly, and TimeEdge.
 
-↓
+## Development workflow
 
-Open Positions
-
-↓
-
-Strategy Engine
-
-↓
-
-Strategy Detector
-
-↓
-
-IMPORT_REVIEW
-
-↓
-
-Manual Approval
-
-↓
-
-MASTER_TRADES
-
-↓
-
-TRADE_LEGS
-
-↓
-
-Trade Monitor
-
-↓
-
-Dashboard / Analytics / AI
-```
-
----
-
-# 3. Completed (Sprint 1 MVP)
-
-## Infrastructure
-
-- GitHub Repository
-- VS Code
-- clasp Integration
-- Google Apps Script
-- Logger
-- Health Framework
-- Configuration
-
----
-
-## IBKR Integration
-
-- Flex Client
-- XML Download
-- XML Cache
-- XML Parser
-- Open Position Parser
-- Execution Parser
-
----
-
-## Strategy Detection
-
-- Strategy Engine Foundation
-- DDC Detector
-- Stable StrategyID generation
-- Stable LegID generation
-
----
-
-## Workflow
-
-- IMPORT_REVIEW Writer
-- Manual Approval
-- Duplicate Protection
-- MASTER_TRADES Import
-- TRADE_LEGS Import
-
----
-
-## Monitoring
-
-- Trade Monitor
-- Live Position Updates
-- Market Value Update
-- Unrealized PnL Update
-
----
-
-## Documentation
-
-- START_HERE.md
-- PROJECT_BRAIN.md
-- SESSION_STATE.md
-- DECISIONS.md
-- PROJECT_HANDOVER.md
-- BACKLOG.md
-- README.md
-- Architecture.md
-- DDC.md
-
----
-
-# 4. Core Design Decisions
-
-## Open Positions are the Source of Truth
-
-Trading OS detects active strategies from IBKR Open Positions.
-
-Historical Executions are NOT used to reconstruct active strategies.
-
-Executions will later be used for:
-
-- Entry
-- Exit
-- Realized PnL
-- Analytics
-
----
-
-## Strategy != Broker Position
-
-A strategy consists of one or more broker positions.
-
-Examples
-
-- DDC → 4 option legs
-- OTV → 2 option legs
-- PMCC → 2 option legs
-
----
-
-## Strategy Engine
-
-Every strategy owns its own detector.
-
-Current
-
-- DDC
-
-Planned
-
-- OTV
-- PMCC
-- Butterfly
-- TimeEdge
-
-Adding a new strategy should only require adding a detector.
-
----
-
-## Import Review
-
-Nothing enters production automatically.
-
-Every detected strategy flows through:
-
-```
-IMPORT_REVIEW
-```
-
-The trader always decides.
-
----
-
-## Manual Override
-
-Every recommendation may be overridden.
-
-Nothing blocks trading.
-
----
-
-## Never Delete Trades
-
-Trades move through lifecycle states.
-
-Nothing is physically deleted.
-
----
-
-# 5. Current Trading Philosophy
-
-Current implemented strategy
-
-- DDC
-
-Planned
-
-- OTV
-- PMCC
-- Butterfly
-- TimeEdge
-- Calendar
-- Sherman Tank
-
-Risk is configurable.
-
----
-
-# 6. Current Workflow
-
-```
-IBKR
-
-↓
-
-Open Positions
-
-↓
-
-Strategy Engine
-
-↓
-
-Strategy Detector
-
-↓
-
-IMPORT_REVIEW
-
-↓
-
-Manual Approval
-
-↓
-
-MASTER_TRADES
-
-↓
-
-TRADE_LEGS
-
-↓
-
-Trade Monitor
-```
-
----
-
-# 7. Current Functional Status
-
-Implemented
-
-- Detect active DDC strategies
-- Manual approval
-- Stable IDs
-- Duplicate prevention
-- Live Market Value
-- Live Unrealized PnL
-
-Not yet implemented
-
-- Closed Trade Detection
-- Exit Synchronization
-- Realized PnL
-- Rolling Detection
-- Partial Exit Detection
-
----
-
-# 8. Folder Structure
-
-Current
-
-```
-src/
-
-IBKR/
-Import/
-Monitor/
-Health/
-Logger/
-Sheets/
-Playbook/
-Utilities/
-```
-
-Future
-
-```
-src/
-
-core/
-engine/
-strategies/
-repositories/
-monitor/
-analytics/
-ui/
-```
-
----
-
-# 9. Sprint History
-
-## Sprint 1
-
-Completed ✅
-
-Included
-
-- Infrastructure
-- IBKR Integration
-- XML Parser
-- Strategy Engine Foundation
-- DDC Detector
-- IMPORT_REVIEW
-- Approval Workflow
-- MASTER_TRADES
-- TRADE_LEGS
-- Trade Monitor
-- Documentation
-
----
-
-# 10. Current Sprint
-
-Sprint 2
-
-Status
-
-READY TO START
-
----
-
-# 11. Sprint 2 Backlog
-
-Priority
-
-1. Closed Trade Detection
-2. Exit Synchronization
-3. Workflow State Automation
-4. Realized PnL
-5. Partial Exit Support
-
-After that
-
-- OTV Detector
-- PMCC Detector
-- Butterfly Detector
-
----
-
-# 12. Technical Debt
-
-- Repository Layer
-- Generic Strategy Interface
-- Unit Tests
-- Integration Tests
-- Configuration Repository
-- Plugin Registration
-
----
-
-# 13. Development Workflow
-
-```
-Edit
-
-↓
-
-clasp push
-
-↓
-
-Test
-
-↓
-
-Health Check
-
-↓
-
-git status
-
-↓
-
-git add
-
-↓
-
-git commit
-
-↓
-
-git push
-```
-
----
-
-# 14. Release Rules
-
-Before every release
-
-- Health Check passes
-- No Apps Script errors
-- Git status clean
-- Commit completed
-- Push completed
-
-Update when required
-
-- SESSION_STATE
-- PROJECT_BRAIN
-- DECISIONS
-- BACKLOG
-- CHANGELOG
-
----
-
-# 15. How to Resume This Project
-
-Read in order
-
-1. START_HERE.md
-2. PROJECT_BRAIN.md
-3. SESSION_STATE.md
-4. DECISIONS.md
-5. PROJECT_HANDOVER.md
-6. BACKLOG.md
-
-After reading
-
-- Verify current sprint
-- Review current architecture
-- Continue from the first unfinished backlog item
-
-Current first priority
-
-**Closed Trade Detection**
-
-Do not redesign the architecture unless explicitly requested.
-
-Continue building on the existing Strategy Engine architecture.
+1. Inspect the existing project and relevant tests.
+2. Make the smallest compatible change.
+3. Run focused unit tests.
+4. Run the full regression suite and release preflight.
+5. Validate in the spreadsheet.
+6. Commit code and documentation together.
+7. Tag meaningful release milestones.

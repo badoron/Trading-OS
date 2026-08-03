@@ -1,178 +1,45 @@
 # BACKLOG
 
-Version: 4.0.0
+Target Version: 4.0.0
 
-This document contains all remaining work for Trading OS.
-
-Completed items are removed from the active backlog and documented in CHANGELOG.md.
+This document contains the remaining work for Trading OS. Completed items are recorded in `CHANGELOG.md`.
 
 ---
 
-# Sprint 2 — Trade Lifecycle
+# Stabilization Cycle 9 — Operational hardening
 
-Status: NEXT
+Status: APPROVED / NEXT
 
-## High Priority
+## TOS-901 — System Health Check
 
-### TOS-201
+Status: TODO
 
-Closed Trade Detection
+Validate required sheets, required headers, Script Properties, runtime functions, and safe preconditions before Full Synchronization begins.
 
-Status
+## TOS-902 — Full Synchronization Audit Log
 
-TODO
+Status: TODO
 
-Description
+Persist one summary row per synchronization including Run ID, start/end time, duration, stage results, counts, and final status.
 
-Detect when an imported strategy no longer exists in IBKR Open Positions.
+## TOS-903 — End-to-End Regression Coverage
 
-Expected Result
+Status: TODO
 
-- WorkflowStatus = CLOSED
-- ExitDate populated
-- Monitoring stops
-- Trade remains in history
-
----
-
-### TOS-202
-
-Exit Synchronization
-
-Status
-
-TODO
-
-Description
-
-Synchronize closed trades using IBKR executions.
-
-Expected Result
-
-- Exit Price
-- Exit Date
-- Broker Commission
-- Realized PnL
-
----
-
-### TOS-203
-
-Workflow State Engine
-
-Status
-
-TODO
-
-Description
-
-Automatic transitions between
-
-DETECTED
-
-↓
-
-APPROVED
-
-↓
-
-IMPORTED
-
-↓
-
-OPEN
-
-↓
-
-PARTIAL_EXIT
-
-↓
-
-CLOSED
-
-↓
-
-ARCHIVED
-
----
-
-### TOS-204
-
-Partial Exit Detection
-
-Status
-
-TODO
-
-Description
-
-Support DDC partial exits.
-
-Business Rule
-
-Closing the short legs marks the strategy as completed.
-
-Remaining long legs are ignored after completion.
-
----
-
-### TOS-205
-
-Residual Position Handling
-
-Status
-
-TODO
-
-Description
-
-Detect remaining contracts after strategy completion.
-
-Allow:
-
-- Ignore
-- Archive
-- Convert to Residual
+Add deterministic regression coverage for orchestration success, controlled download failure, pending-review pause, residual refresh, and residual closure.
 
 ---
 
 # Sprint 3 — Strategy Expansion
 
-Status: PLANNED
+Status: PLANNED AFTER HARDENING
 
-### TOS-301
-
-OTV Detector
-
----
-
-### TOS-302
-
-PMCC Detector
-
----
-
-### TOS-303
-
-Butterfly Detector
-
----
-
-### TOS-304
-
-TimeEdge Detector
-
----
-
-### TOS-305
-
-Strategy Plugin Registration
-
----
-
-### TOS-306
-
-Generic Strategy Engine
+- TOS-301 — OTV Detector
+- TOS-302 — PMCC Detector
+- TOS-303 — Butterfly Detector
+- TOS-304 — TimeEdge Detector
+- TOS-305 — Strategy Plugin Registration
+- TOS-306 — Generic Strategy Engine
 
 ---
 
@@ -180,100 +47,55 @@ Generic Strategy Engine
 
 Status: PLANNED
 
-### TOS-401
-
-Dashboard
-
----
-
-### TOS-402
-
-Portfolio Analytics
-
----
-
-### TOS-403
-
-Risk Engine
-
----
-
-### TOS-404
-
-Compounding Engine
-
----
-
-### TOS-405
-
-Performance Analytics
-
----
-
-### TOS-406
-
-AI Trade Reviews
+- TOS-401 — Dashboard expansion
+- TOS-402 — Portfolio Analytics
+- TOS-403 — Risk Engine
+- TOS-404 — Compounding Engine
+- TOS-405 — Performance Analytics
+- TOS-406 — AI Trade Reviews
 
 ---
 
 # Technical Debt
 
-## TD-001
-
-Repository Layer
-
-Replace direct sheet access with repositories.
-
----
-
-## TD-002
-
-Configuration Repository
-
-Move all configurable values into configuration services.
+- TD-001 — Repository abstraction for direct sheet access
+- TD-002 — Centralized configuration repository
+- TD-003 — Continue automated unit-test expansion
+- TD-004 — Integration and end-to-end synchronization tests
+- TD-005 — Automatic detector/plugin registration
 
 ---
 
-## TD-003
+# Completed
 
-Unit Tests
+## Sprint 1 MVP
 
-Create automated unit tests.
+- IBKR Flex Client and XML cache
+- XML and Open Position parsers
+- Strategy Engine foundation and DDC Detector
+- Stable Strategy IDs and Leg IDs
+- IMPORT_REVIEW and manual approval
+- MASTER_TRADES and TRADE_LEGS
+- Trade Monitor and live synchronization
+- Duplicate protection
 
----
+## Sprint 2 — Trade Lifecycle
 
-## TD-004
+- Closed trade detection
+- Exit synchronization
+- Workflow state engine
+- Partial exit detection
+- Trade Lifecycle Monitor
+- Trade Finalizer
+- Delayed Import Recovery and regression coverage
+- Residual classification and `COMPLETED_WITH_RESIDUAL`
+- Residual persistence to `RESIDUAL_POSITIONS`
+- Residual refresh and automatic closure against IBKR Open Positions
 
-Integration Tests
+## Full Synchronization milestone
 
-End-to-end synchronization tests.
-
----
-
-## TD-005
-
-Plugin Registration
-
-Automatic detector registration.
-
----
-
-# Completed (Moved to CHANGELOG)
-
-Sprint 1 MVP
-
-- IBKR Flex Client
-- XML Cache
-- XML Parser
-- Open Position Parser
-- Strategy Engine Foundation
-- DDC Detector
-- Stable Strategy IDs
-- Stable Leg IDs
-- IMPORT_REVIEW
-- Manual Approval
-- MASTER_TRADES
-- TRADE_LEGS
-- Trade Monitor
-- Live Synchronization
-- Duplicate Protection
+- One-click end-to-end workflow
+- Five-attempt bounded IBKR retry handling
+- Safe cached-XML preservation on error `1001`
+- Dashboard and HOME refresh in the same run
+- Live production validation completed

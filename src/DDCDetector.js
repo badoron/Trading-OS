@@ -4,39 +4,79 @@
  */
 
 const TOS_DDC_DETECTOR = {
-  detectFromCachedXml() {
-    const xml = TOS_IBKR_FLEX.getLastXml();
+detectFromCachedXml() {
+  const snapshot =
+    TOS_BROKER_SNAPSHOT_SERVICE.load();
 
-    if (!xml) {
-      throw new Error('No cached IBKR XML found.');
-    }
+  return this.detectFromSnapshot_(
+    snapshot
+  );
+},
 
-    const parsed = TOS_IBKR_FLEX_PARSER.parse(xml);
-    const trades = parsed.trades || [];
+detectFromSnapshot_(snapshot) {
+  if (!snapshot) {
+    throw new Error(
+      'Broker snapshot is required.'
+    );
+  }
 
-    Logger.log('IBKR trades loaded: ' + trades.length);
+  const trades =
+    snapshot.trades || [];
 
-    const optionTrades = trades.filter(t => t.assetCategory === 'OPT');
-    Logger.log('Option trades: ' + optionTrades.length);
+  Logger.log(
+    'IBKR trades loaded: ' +
+    trades.length
+  );
 
-    const groups = this.groupByUnderlyingExpiry_(optionTrades);
+  const optionTrades =
+    trades.filter(
+      trade =>
+        trade.assetCategory ===
+        'OPT'
+    );
 
-    Logger.log('DDC candidate groups: ' + groups.length);
+  Logger.log(
+    'Option trades: ' +
+    optionTrades.length
+  );
 
-    groups.forEach((group, index) => {
+  const groups =
+    this.groupByUnderlyingExpiry_(
+      optionTrades
+    );
+
+  Logger.log(
+    'DDC candidate groups: ' +
+    groups.length
+  );
+
+  groups.forEach(
+    (group, index) => {
       Logger.log(
-        'Group #' + (index + 1) +
-        ' | Symbol: ' + group.symbol +
-        ' | Expiry: ' + group.expiry +
-        ' | Legs: ' + group.legs.length +
-        ' | Net: ' + group.netCreditDebit
+        'Group #' +
+        (index + 1) +
+        ' | Symbol: ' +
+        group.symbol +
+        ' | Expiry: ' +
+        group.expiry +
+        ' | Legs: ' +
+        group.legs.length +
+        ' | Net: ' +
+        group.netCreditDebit
       );
 
-      Logger.log(JSON.stringify(group.legs, null, 2));
-    });
+      Logger.log(
+        JSON.stringify(
+          group.legs,
+          null,
+          2
+        )
+      );
+    }
+  );
 
-    return groups;
-  },
+  return groups;
+},
 
   groupByUnderlyingExpiry_(trades) {
     const map = {};
