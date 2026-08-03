@@ -60,12 +60,40 @@ IDEA → DETECTED → NEEDS_REVIEW → IMPORTED → OPEN → PARTIAL_CLOSE → C
 6. git commit
 7. git push
 
+## Regression Coverage
+
+Current automated regression status:
+
+- Total regression suites: 43
+- Passing: 43
+- Failing: 0
+
+### Delayed Import Coverage
+
+Trading OS regression now validates delayed broker synchronization using realistic user journeys.
+
+Covered scenarios:
+
+- Delayed import with partial trade exit
+- Delayed import with full trade exit
+- Multiple missed imports followed by a single Flex import
+- Full lifecycle replay reconstructed from delayed historical executions
+
+These tests verify that Trading OS correctly reconstructs trade state, leg status, realized P/L, commissions and final trade lifecycle from IBKR historical execution data, provided the required executions remain available in the configured Flex Query lookback window.
+
+
+
+
+## Current milestone
+
+`v3.1.0-rc.2` completes and validates Full Synchronization plus Residual Lifecycle against live IBKR data.
+
 ## Next Sprint
-Smart Import Engine v1:
-- ImportDetector
-- StrategyClassifier
-- ImportDecision
-- Playbook Scorer
-- Commission Estimator
-- Risk Estimator
-- Import Inbox Writer
+
+Operational hardening:
+
+- System Health Check before Full Synchronization
+- Persistent synchronization Audit Log
+- End-to-End orchestration regression coverage
+
+Strategy expansion follows only after hardening.
